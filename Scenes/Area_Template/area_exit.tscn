@@ -1,0 +1,24 @@
+[gd_scene format=3 uid="uid://xoc6tay6u8gn"]
+
+[ext_resource type="Script" uid="uid://01r4q23iyqkq" path="res://Scripts/area_exit.gd" id="1_r817m"]
+[ext_resource type="Texture2D" uid="uid://dg3a32tthb81t" path="res://assetused/Platformer_Dungeon Asset Pack/Door/Door.png" id="1_w8pp6"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_p43vi"]
+size = Vector2(23, 43)
+
+[node name="AreaExit" type="Area2D" unique_id=327589249 groups=["area_exits"]]
+collision_layer = 8
+script = ExtResource("1_r817m")
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=1600969837]
+position = Vector2(5.5, -7)
+scale = Vector2(1.34375, 1.4375)
+texture = ExtResource("1_w8pp6")
+region_enabled = true
+region_rect = Rect2(0, -0.36030746, 31.963, 32.692844)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=831756354]
+position = Vector2(5.5, -5.5)
+shape = SubResource("RectangleShape2D_p43vi")
+
+[connection signal="body_entered" from="." to="." method="_on_body_entered"]

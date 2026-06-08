@@ -1,0 +1,48 @@
+[gd_scene format=3 uid="uid://dbn3ins6plu3l"]
+
+[ext_resource type="Texture2D" uid="uid://cib17a5xdw8tp" path="res://assetused/coin_gold.png" id="1_33i1w"]
+[ext_resource type="Script" uid="uid://kv10ibh8liy7" path="res://Scenes/HUD/hud.gd" id="1_a56j6"]
+[ext_resource type="LabelSettings" uid="uid://bycv0mop6tart" path="res://Scenes/UI Settings/new_label_settings.tres" id="2_5aai8"]
+
+[node name="HUD" type="Control" unique_id=700294900 node_paths=PackedStringArray("gold_coin_label", "portal_label") groups=["HUD"]]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_a56j6")
+gold_coin_label = NodePath("GoldCoinTexure/GoldCoinLabel")
+portal_label = NodePath("PortalLabel")
+
+[node name="GoldCoinTexure" type="TextureRect" parent="." unique_id=1234438397]
+layout_mode = 1
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 53.0
+offset_bottom = 51.0
+texture = ExtResource("1_33i1w")
+expand_mode = 1
+
+[node name="GoldCoinLabel" type="Label" parent="GoldCoinTexure" unique_id=135433098]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 48.0
+offset_right = 109.0
+offset_bottom = 71.0
+text = "Coins"
+label_settings = ExtResource("2_5aai8")
+
+[node name="PortalLabel" type="Label" parent="." unique_id=1708866975]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -66.0
+offset_top = 16.0
+offset_right = -19.0
+offset_bottom = 39.0
+grow_horizontal = 0
+text = "portal
+status"
+label_settings = ExtResource("2_5aai8")
