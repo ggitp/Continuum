@@ -73,8 +73,8 @@ down={
 2d_physics/layer_4="Transitions"
 2d_physics/layer_5="Enemies"
 2d_physics/layer_6="EnemyRayCast"
-2d_physics/layer_7="EnemyHurtBox"
-2d_physics/layer_8="EnemyHitBox"
+2d_physics/layer_7="EnemyHitBox"
+2d_physics/layer_8="EnemyAttackingBox"
 2d_physics/layer_9="PlayerHitBox"
 2d_physics/layer_10="EnemyDetectionArea"
 
