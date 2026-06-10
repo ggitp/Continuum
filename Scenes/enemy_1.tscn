@@ -399,7 +399,6 @@ patrol_timeout = NodePath("PatrolRest")
 enemy_memory_timer = NodePath("EnemyMemory")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1440814162]
-visible = false
 position = Vector2(0, -1.22)
 scale = Vector2(1.41, 1.41)
 shape = SubResource("RectangleShape2D_0a874")
@@ -417,22 +416,18 @@ frame_progress = 0.67550796
 [node name="RayCasts" type="Node2D" parent="." unique_id=99366914]
 
 [node name="GroundCheck" type="RayCast2D" parent="RayCasts" unique_id=1441690707]
-visible = false
 position = Vector2(20, 0)
 target_position = Vector2(0, 25)
 collision_mask = 2
 
 [node name="WallCheck" type="RayCast2D" parent="RayCasts" unique_id=231909481]
-visible = false
 position = Vector2(15, -10)
 target_position = Vector2(25, 0)
 collision_mask = 2
 
 [node name="PlayerBackCheck" type="RayCast2D" parent="RayCasts" unique_id=799274059]
-visible = false
 scale = Vector2(1, 2)
 target_position = Vector2(-70, 0)
-collide_with_bodies = false
 
 [node name="PlayerChase" type="RayCast2D" parent="RayCasts" unique_id=89942289]
 scale = Vector2(2, 9)
@@ -440,7 +435,6 @@ target_position = Vector2(80, 0)
 collision_mask = 3
 
 [node name="HurtedBox" type="Area2D" parent="." unique_id=2016722733]
-visible = false
 collision_layer = 64
 collision_mask = 256
 
@@ -449,7 +443,6 @@ position = Vector2(0, -1)
 shape = SubResource("CapsuleShape2D_hmo6u")
 
 [node name="AttackingBox" type="Area2D" parent="." unique_id=1478801077]
-visible = false
 collision_layer = 128
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="AttackingBox" unique_id=758051927]
