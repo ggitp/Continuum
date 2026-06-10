@@ -4,6 +4,10 @@
 [ext_resource type="Script" uid="uid://b5yf1a2bh02i8" path="res://Scripts/player_animator.gd" id="2_vgqql"]
 [ext_resource type="Texture2D" uid="uid://cvn3ghnkxfelr" path="res://Assets/SHADOW Series - The Blind Huntress/SHADOW Series - The Blind Huntress.png" id="3_fkybt"]
 
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_aftqw"]
+radius = 6.0
+height = 40.0
+
 [sub_resource type="Animation" id="Animation_it8n0"]
 length = 0.001
 tracks/0/type = "value"
@@ -213,10 +217,6 @@ _data = {
 &"standuatt": SubResource("Animation_p20bj")
 }
 
-[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_aftqw"]
-radius = 6.0
-height = 40.0
-
 [node name="Player" type="CharacterBody2D" unique_id=375671177 node_paths=PackedStringArray("camera") groups=["player"]]
 collision_mask = 6
 platform_on_leave = 2
@@ -227,6 +227,10 @@ camera = NodePath("Camera2D")
 zoom = Vector2(1.16, 1.16)
 position_smoothing_enabled = true
 position_smoothing_speed = 10.0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1053104723]
+position = Vector2(0, -0.67)
+shape = SubResource("CapsuleShape2D_aftqw")
 
 [node name="PlayerAnimator" type="Node2D" parent="." unique_id=1458970839 node_paths=PackedStringArray("player_controller", "animation_player", "sprite")]
 script = ExtResource("2_vgqql")
@@ -243,8 +247,3 @@ autoplay = &"idle"
 texture = ExtResource("3_fkybt")
 region_enabled = true
 region_rect = Rect2(107.05806, 38.647575, 22.979904, 44.871162)
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1053104723]
-visible = false
-position = Vector2(0, -0.67)
-shape = SubResource("CapsuleShape2D_aftqw")

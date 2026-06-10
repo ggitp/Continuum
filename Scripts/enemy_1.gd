@@ -45,6 +45,19 @@ var target : PlayerController
 var target_position : Vector2
 var avoiding_obstacle := false
 
+#
+#
+#									!!!IMPORTANT!!!
+#	Target is to refactor the code where the states will never be changed manually, only through the change_state function
+#	Each function of the state will take in a bool/enum variable which will indicate if a certain part of the function should be skipped ie preperation
+#	If that certain part is not needed then it will skip that stage
+#	That will make the code way less buggy and easier to manipulate without getting lost in between certain states incase a part was skipped
+#	Right now the code is buggy in terms of timer resets and a bit of states changing but nothing too serious
+#									!!!IMPORTANT!!!
+#
+#
+
+
 
 func _ready() -> void:
 	#Patrol timer set up
@@ -71,7 +84,8 @@ func _physics_process(delta: float) -> void:
 			var seen_player = enemy_player_chase.get_collider()
 			if seen_player == null:
 				seen_player = enemy_player_back_check.get_collider()
-			target = seen_player
+			if seen_player is PlayerController:
+				target = seen_player
 			enemy_memory_timer.start(10.0)
 			change_state(EnemyState.CHASE)
 	
@@ -119,7 +133,9 @@ func _chase_player():
 		print("chase canceled")
 		return
 	
+	enemy_animations.play("run")
 	patrol_timeout.stop()
+	previous_state = EnemyState.CHASE
 	
 	if avoiding_obstacle:
 		return
@@ -151,6 +167,7 @@ func _avoiding_obstacle():
 
 #Memory of remembering the player
 func _on_enemy_memory_timeout() -> void:
+	patrol_timeout.start(8.0)
 	change_state(EnemyState.IDLE)
 
 
@@ -174,7 +191,9 @@ func _attack():
 	await enemy_animations.animation_finished
 
 	#Next move
-	
+	if enemy_state == EnemyState.ATTACK and previous_state == EnemyState.CHASE:
+		enemy_memory_timer.start(10.0)
+		_chase_player()
 	
 	if enemy_state == EnemyState.ATTACK:
 		change_state(EnemyState.IDLE)
@@ -275,8 +294,9 @@ func _flip_raycast(ray : RayCast2D):
 
 
 
-
 #Hit
+
+
 
 
 #Dead
