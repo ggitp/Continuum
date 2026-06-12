@@ -6,6 +6,7 @@
 [ext_resource type="Texture2D" uid="uid://bhlf3laakssto" path="res://assetused/Luneblade - Little Axion/Sprite Sheet/Hurt.png" id="4_wlnc2"]
 [ext_resource type="Texture2D" uid="uid://cq5q4ymml4ud0" path="res://assetused/Luneblade - Little Axion/Sprite Sheet/Idle.png" id="5_hmo6u"]
 [ext_resource type="Texture2D" uid="uid://cqvl24piphp82" path="res://assetused/Luneblade - Little Axion/Sprite Sheet/Run.png" id="6_arec4"]
+[ext_resource type="Texture2D" uid="uid://bnbgm1kuwvxaj" path="res://assetused/Luneblade - Little Axion/Sprite Sheet/Fall.png" id="6_v73nf"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_0a874"]
 size = Vector2(13, 15.602837)
@@ -161,6 +162,22 @@ region = Rect2(720, 0, 144, 144)
 [sub_resource type="AtlasTexture" id="AtlasTexture_xfaib"]
 atlas = ExtResource("5_hmo6u")
 region = Rect2(864, 0, 144, 144)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_fnuvv"]
+atlas = ExtResource("6_v73nf")
+region = Rect2(0, 0, 144, 144)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_o4x10"]
+atlas = ExtResource("6_v73nf")
+region = Rect2(144, 0, 144, 144)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_iede4"]
+atlas = ExtResource("6_v73nf")
+region = Rect2(288, 0, 144, 144)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_i7vd0"]
+atlas = ExtResource("6_v73nf")
+region = Rect2(432, 0, 144, 144)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_v73nf"]
 atlas = ExtResource("6_arec4")
@@ -350,6 +367,23 @@ animations = [{
 "speed": 7.0
 }, {
 "frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_fnuvv")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_o4x10")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_iede4")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_i7vd0")
+}],
+"loop": true,
+"name": &"launched",
+"speed": 4.0
+}, {
+"frames": [{
 "duration": 1.1,
 "texture": SubResource("AtlasTexture_v73nf")
 }, {
@@ -399,6 +433,7 @@ patrol_timeout = NodePath("PatrolRest")
 enemy_memory_timer = NodePath("EnemyMemory")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1440814162]
+visible = false
 position = Vector2(0, -1.22)
 scale = Vector2(1.41, 1.41)
 shape = SubResource("RectangleShape2D_0a874")
@@ -408,12 +443,13 @@ shape = SubResource("RectangleShape2D_0a874")
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="EnemyAnimation" unique_id=1479655728]
 scale = Vector2(1.225, 1.225)
 sprite_frames = SubResource("SpriteFrames_lssre")
-animation = &"attack"
+animation = &"launched"
 autoplay = "idle"
-frame = 3
-frame_progress = 0.67550796
+frame = 2
+frame_progress = 0.224274
 
 [node name="RayCasts" type="Node2D" parent="." unique_id=99366914]
+visible = false
 
 [node name="GroundCheck" type="RayCast2D" parent="RayCasts" unique_id=1441690707]
 position = Vector2(20, 0)
@@ -422,7 +458,7 @@ collision_mask = 2
 
 [node name="WallCheck" type="RayCast2D" parent="RayCasts" unique_id=231909481]
 position = Vector2(15, -10)
-target_position = Vector2(25, 0)
+target_position = Vector2(33, 0)
 collision_mask = 2
 
 [node name="PlayerBackCheck" type="RayCast2D" parent="RayCasts" unique_id=799274059]
@@ -435,6 +471,7 @@ target_position = Vector2(80, 0)
 collision_mask = 3
 
 [node name="HurtedBox" type="Area2D" parent="." unique_id=2016722733]
+visible = false
 collision_layer = 64
 collision_mask = 256
 
@@ -443,6 +480,7 @@ position = Vector2(0, -1)
 shape = SubResource("CapsuleShape2D_hmo6u")
 
 [node name="AttackingBox" type="Area2D" parent="." unique_id=1478801077]
+visible = false
 collision_layer = 128
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="AttackingBox" unique_id=758051927]
