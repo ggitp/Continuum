@@ -36,6 +36,7 @@ area_container=""
 player=""
 player_start_position=""
 HUD=""
+enemy=""
 
 [input]
 

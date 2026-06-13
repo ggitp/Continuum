@@ -1,5 +1,5 @@
 extends CharacterBody2D
-class_name EnemyController
+class_name EnemyControllerOld
 
 
 

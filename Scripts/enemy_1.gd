@@ -27,6 +27,15 @@ enum EnemyState {
 	
 }
 
+
+#For Standing up
+var standing_tween : Tween
+
+
+#Death emitter
+signal enemy_dead
+var death_finished := false
+
 #Variables for LAUNCHED state
 @export var launch_x := 250.0
 @export var launch_y := -450.0
@@ -45,7 +54,9 @@ var launch_peak_y := 0.0
 @export var enemy_wall_check : RayCast2D
 @export var enemy_player_chase : RayCast2D
 @export var enemy_player_back_check : RayCast2D
-@export var enemy_attacking_box : CollisionShape2D
+@export var enemy_detection_box : CollisionShape2D
+@export var enemy_damage_box : CollisionObject2D
+@export var enemy_hurt_box : Area2D
 @export var speed := 3.0
 
 
@@ -53,6 +64,7 @@ var launch_peak_y := 0.0
 var previous_state : EnemyState
 var enemy_state : EnemyState = EnemyState.PATROL
 var direction := 1
+var desired_direction
 var speed_multiplier := 30.0
 
 var state_time := 0.0
@@ -89,7 +101,7 @@ func _ready() -> void:
 
 func _physics_process(delta : float):
 	# Add the gravity.
-	if not is_on_floor():
+	if not is_on_floor() and enemy_state != EnemyState.LAUNCHED:
 		velocity += get_gravity() * delta
 	
 	
@@ -130,6 +142,9 @@ func _change_state(new_state : EnemyState):
 	if _can_change_state_to(new_state):
 		enemy_state = new_state
 	else : return
+	
+	if enemy_state == EnemyState.ATTACK:
+		enemy_damage_box.disabled = true
 	
 	#match enemy_state:
 		#EnemyState.CHASE:
@@ -249,13 +264,9 @@ func _idle_update(delta):
 	state_time -= delta
 	velocity.x = 0
 	
-	_idle_check_expiry()
-
-
-func _idle_check_expiry():
-	
 	if state_time < 0:
 		_change_state(previous_state)
+
 
 
 #
@@ -273,8 +284,6 @@ func _idle_check_expiry():
 
 
 func _init_chase():
-	
-	enemy_state = EnemyState.CHASE
 	
 	if enemy_animations.animation != "run":
 		enemy_animations.play("run")
@@ -295,10 +304,13 @@ func _update_chase(_delta):
 		_flip_enemy_sprite_rays()
 		avoiding_obstacle_timer.start(3.0)
 		_avoid_obstacles()
+		return
 	
-	direction = sign(target.global_position.x - global_position.x)
-	if (direction < 0 and enemy_animations.flip_h == false) or (direction > 0 and enemy_animations.flip_h == true):
-		_flip_enemy_sprite_rays()
+	desired_direction = sign(target.global_position.x - global_position.x)
+	
+	if desired_direction != 0:
+		if (direction < 0 and enemy_animations.flip_h == false) or (direction > 0 and enemy_animations.flip_h == true):
+			_flip_enemy_sprite_rays()
 	velocity.x = direction * speed * speed_multiplier
 
 
@@ -312,8 +324,7 @@ func _avoid_obstacles():
 
 
 func _on_enemy_memory_timeout() -> void:
-	enemy_state = EnemyState.IDLE
-	_change_state(enemy_state)
+	_change_state(EnemyState.IDLE)
 
 
 #
@@ -348,8 +359,31 @@ func _on_enemy_memory_timeout() -> void:
 #
 
 
-# Not to implement right now
+func _init_alert():
+	
+	desired_direction = sign(target.global_position.x - global_position.x)
+	
+	if desired_direction != 0:
+		direction = desired_direction
+		if ((direction < 0 and !enemy_animations.flip_h) or 
+		(direction > 0 and enemy_animations.flip_h)):
+			_flip_enemy_sprite_rays()
+	
+	velocity.x = 0
+	
+	if enemy_animations.animation != "idle":
+		enemy_animations.play("idle")
+	
+	state_time = 0.2
 
+
+func _update_alert(delta):
+	
+	velocity.x = 0
+	state_time -= delta
+	
+	if state_time <= 0:
+		_change_state(EnemyState.CHASE)
 
 
 #
@@ -373,8 +407,7 @@ func _init_attack_windup():
 	if enemy_animations.animation != "idle":
 		enemy_animations.play("idle")
 	
-	state_time = 0.3
-	
+	state_time = 0.2
 
 
 func _update_attack_windup(delta):
@@ -382,12 +415,7 @@ func _update_attack_windup(delta):
 	velocity.x = 0
 	state_time -= delta
 	
-	_check_attack_windup_expiry()
-
-
-func _check_attack_windup_expiry():
-	
-	if state_time < 0:
+	if state_time <= 0:
 		_change_state(EnemyState.ATTACK)
 
 
@@ -408,14 +436,13 @@ func _check_attack_windup_expiry():
 func _init_attack():
 	
 	velocity.x = 0
+	enemy_damage_box.disabled = true
 	
 	if enemy_animations.animation != "attack":
 		enemy_animations.play("attack")
 
 
 
-# I need to make another attacking box, it will turn on on frame 4-5 to damage a player,
-# Right now enemy_attacking_box is only to detect if somebody enters attacking zone
 func _update_attack():
 	
 	velocity.x = 0
@@ -423,14 +450,16 @@ func _update_attack():
 	var frame = enemy_animations.frame
 	
 	if frame == 6 or frame == 7:
-		enemy_attacking_box.disabled = true
+		enemy_damage_box.disabled = false
 	
 	if frame >= 8:
-		enemy_attacking_box.disabled = false
+		enemy_damage_box.disabled = true
 	
 	if frame >= enemy_animations.sprite_frames.get_frame_count("attack")-1:
+		enemy_damage_box.disabled = true
 		_change_state(EnemyState.ATTACK_COOLDOWN)
 	
+
 
 
 #
@@ -450,7 +479,7 @@ func _update_attack():
 func _init_attack_cooldown():
 	
 	velocity.x = 0
-	state_time = 0.3
+	state_time = 0.2
 	
 	if enemy_animations.animation != "idle":
 		enemy_animations.play("idle")
@@ -496,6 +525,7 @@ func _update_got_hit(delta):
 	
 	state_time -= delta
 	
+	velocity.y += get_gravity().y * delta
 	velocity.x = move_toward(velocity.x, 0, 900 * delta)
 	
 	if state_time <= 0:
@@ -539,7 +569,7 @@ func _init_launched():
 	if enemy_animations.animation != "launched":
 		enemy_animations.play("launched")
 	
-	enemy_animations.rotation_degrees = -90
+	enemy_animations.rotation_degrees = -90 * direction
 	
 	launch_start_y = global_position.y
 	launch_peak_y = global_position.y
@@ -572,6 +602,7 @@ func _update_launched(delta):
 	velocity.x = move_toward(velocity.x, 0, 500 * delta)
 
 	if is_on_floor():
+		enemy_animations.rotation_degrees = 0
 		_change_state(EnemyState.STANDING_UP)
 
 
@@ -588,7 +619,31 @@ func _update_launched(delta):
 ###
 #
 
+func _init_standing_up():
+	
+	velocity.x = 0
+	state_time = 0.35
+	
+	enemy_animations.scale.y = 0.6
+	
+	if standing_tween:
+		standing_tween.kill()
+	
+	standing_tween = create_tween()
+	standing_tween.tween_property(
+		enemy_animations,
+		"scale:y",
+		1.225,
+		0.35)
 
+
+func _update_standing_up(delta):
+	
+	velocity.x = 0
+	state_time -= delta
+	
+	if state_time <= 0:
+		_change_state(EnemyState.CHASE)
 
 
 
@@ -598,6 +653,40 @@ func _update_launched(delta):
 #####					STANDING_UP END
 ###
 #
+
+
+#
+###
+#####					DEATH
+###
+#
+
+
+func _init_death():
+	
+	velocity.x = 0
+	enemy_hurt_box.collision_layer = 0
+	
+	if enemy_animations.animation != "dead":
+		enemy_animations.play("dead")
+
+func _update_death():
+	
+	if death_finished:
+		return
+	
+	if enemy_animations.frame == enemy_animations.sprite_frames.get_frame_count("dead")-1:
+		enemy_dead.emit()
+		queue_free()
+
+
+
+#
+###
+#####					DEATH END
+###
+#
+
 
 
 
@@ -622,9 +711,7 @@ func _on_hit_box_body_entered(body: Node2D) -> void:
 
 #Checking walls and falls
 func _checking_walls_and_falls() -> bool :
-	if not enemy_ground_check.is_colliding() or enemy_wall_check.is_colliding():
-		return true
-	else: return false
+	return not enemy_ground_check.is_colliding() or enemy_wall_check.is_colliding()
 
 
 # Flip sprite + rays + collisions
@@ -635,7 +722,7 @@ func _flip_enemy_sprite_rays():
 	_flip_raycast(enemy_player_chase)
 	_flip_raycast(enemy_wall_check)
 	_flip_raycast(enemy_player_back_check)
-	enemy_attacking_box.position.x *= -1
+	enemy_detection_box.position.x *= -1
 
 
 #Flipping rays

@@ -416,10 +416,13 @@ animations = [{
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_hmo6u"]
 radius = 11.0
 
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_v73nf"]
+size = Vector2(37, 20)
+
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_arec4"]
 size = Vector2(37, 20)
 
-[node name="Enemy1" type="CharacterBody2D" unique_id=370468974 node_paths=PackedStringArray("enemy_animations", "enemy_ground_check", "enemy_wall_check", "enemy_player_chase", "enemy_player_back_check", "enemy_attacking_box", "patrol_timeout", "enemy_memory_timer")]
+[node name="Enemy1" type="CharacterBody2D" unique_id=370468974 node_paths=PackedStringArray("enemy_animations", "enemy_ground_check", "enemy_wall_check", "enemy_player_chase", "enemy_player_back_check", "enemy_detection_box", "enemy_damage_box", "enemy_hurt_box", "patrol_timeout", "enemy_memory_timer")]
 collision_layer = 16
 collision_mask = 7
 script = ExtResource("1_hmo6u")
@@ -428,7 +431,9 @@ enemy_ground_check = NodePath("RayCasts/GroundCheck")
 enemy_wall_check = NodePath("RayCasts/WallCheck")
 enemy_player_chase = NodePath("RayCasts/PlayerChase")
 enemy_player_back_check = NodePath("RayCasts/PlayerBackCheck")
-enemy_attacking_box = NodePath("AttackingBox/CollisionShape2D")
+enemy_detection_box = NodePath("DetectionBox/CollisionShape2D")
+enemy_damage_box = NodePath("AttackingBox")
+enemy_hurt_box = NodePath("HurtedBox")
 patrol_timeout = NodePath("PatrolRest")
 enemy_memory_timer = NodePath("EnemyMemory")
 
@@ -445,8 +450,8 @@ scale = Vector2(1.225, 1.225)
 sprite_frames = SubResource("SpriteFrames_lssre")
 animation = &"launched"
 autoplay = "idle"
-frame = 2
-frame_progress = 0.224274
+frame = 3
+frame_progress = 0.31235263
 
 [node name="RayCasts" type="Node2D" parent="." unique_id=99366914]
 visible = false
@@ -479,11 +484,18 @@ collision_mask = 256
 position = Vector2(0, -1)
 shape = SubResource("CapsuleShape2D_hmo6u")
 
-[node name="AttackingBox" type="Area2D" parent="." unique_id=1478801077]
+[node name="AttackingBox" type="Area2D" parent="." unique_id=314147041]
+visible = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="AttackingBox" unique_id=133796319]
+position = Vector2(29, 0)
+shape = SubResource("RectangleShape2D_v73nf")
+
+[node name="DetectionBox" type="Area2D" parent="." unique_id=1478801077]
 visible = false
 collision_layer = 128
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="AttackingBox" unique_id=758051927]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="DetectionBox" unique_id=758051927]
 position = Vector2(29, 0)
 shape = SubResource("RectangleShape2D_arec4")
 
@@ -493,6 +505,6 @@ one_shot = true
 [node name="EnemyMemory" type="Timer" parent="." unique_id=1970577044]
 one_shot = true
 
-[connection signal="body_entered" from="AttackingBox" to="." method="_on_hit_box_body_entered"]
+[connection signal="body_entered" from="DetectionBox" to="." method="_on_hit_box_body_entered"]
 [connection signal="timeout" from="PatrolRest" to="." method="_on_patrol_timeout_timeout"]
 [connection signal="timeout" from="EnemyMemory" to="." method="_on_enemy_memory_timeout"]

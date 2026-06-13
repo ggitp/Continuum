@@ -203,4 +203,4 @@ position = Vector2(209, 48)
 [node name="FireCell4" parent="Collectibles" unique_id=1637023971 instance=ExtResource("4_w04ll")]
 position = Vector2(139, 44)
 
-[node name="Enemies" type="Node2D" parent="." unique_id=823014197]
+[node name="Enemies" type="Node2D" parent="." unique_id=823014197 groups=["enemy"]]
