@@ -2,6 +2,8 @@ extends CharacterBody2D
 class_name EnemyController
 
 
+#Blindly written just for fun, 0 tests.
+
 
 enum EnemyState {
 	
@@ -16,7 +18,7 @@ enum EnemyState {
 	ATTACK_COOLDOWN,
 	
 	
-	GOT_HIT, #Using that as "stagger"
+	GOT_HIT,
 	KNOCK_BACK,
 	
 	
@@ -105,28 +107,46 @@ func _physics_process(delta : float):
 		velocity += get_gravity() * delta
 	
 	
-	
+	#Some of the states dont really need delta but might be useful later on, if not, will be removed.
 	match enemy_state:
+		
 		EnemyState.PATROL:
 			_update_patrol(delta)
 		
-		#EnemyState.CHASE:
-			#_update_chase(delta)
-		#
-		#EnemyState.ATTACK_WINDUP:
-			#_update_attack_windup(delta)
-		#
-		#EnemyState.ATTACK:
-			#_update_attack(delta)
-		#
-		#EnemyState.ATTACK_COOLDOWN:
-			#_update_attack_recovery(delta)
+		EnemyState.IDLE:
+			_update_idle(delta)
+		
+		EnemyState.ALERT:
+			_update_alert(delta)
+		
+		EnemyState.CHASE:
+			_update_chase(delta)
+		
+		EnemyState.ATTACK_WINDUP:
+			_update_attack_windup(delta)
+		
+		EnemyState.ATTACK:
+			_update_attack(delta)
+		
+		EnemyState.ATTACK_COOLDOWN:
+			_update_attack_cooldown(delta)
+		
+		EnemyState.GOT_HIT:
+			_update_got_hit(delta)
+		
+		EnemyState.LAUNCHED:
+			_update_launched(delta)
+		
+		EnemyState.STANDING_UP:
+			_update_standing_up(delta)
+		
+		EnemyState.DEATH:
+			_update_death(delta)
 	
 	
 	if enemy_player_chase.get_collider() is PlayerController or enemy_player_back_check.get_collider() is PlayerController:
 		patrol_timeout.stop()
-		enemy_memory_timer.start(10.0)
-		_change_state(EnemyState.CHASE)
+		_change_state(EnemyState.ALERT)
 	
 	
 	move_and_slide()
@@ -139,67 +159,137 @@ func _change_state(new_state : EnemyState):
 		print("state didnt change, dont do anything")
 		return
 	
+	var clean_up_state = enemy_state
+	
 	if _can_change_state_to(new_state):
 		enemy_state = new_state
 	else : return
 	
+	if clean_up_state == EnemyState.PATROL:
+		patrol_timeout.stop()
+	
+	if clean_up_state == EnemyState.CHASE:
+		enemy_memory_timer.stop()
+	
 	if enemy_state == EnemyState.ATTACK:
 		enemy_damage_box.disabled = true
 	
-	#match enemy_state:
-		#EnemyState.CHASE:
-			#print("matched chase")
-			#_init_chase()
-		#EnemyState.IDLE:
-			#print("matched idle")
-			#_init_idle()
-		#EnemyState.PATROL:
-			#print("matched patrol")
-			#_init_patrol()
-		#EnemyState.ATTACK_WINDUP:
-			#print("matched windup")
-			#_init_attack_windup()
-		#EnemyState.ATTACK:
-			#print("matched attack")
-			#_init_attack()
-		#EnemyState.ATTACK_COOLDOWN:
-			#print("matched cooldown")
-			#_init_attack_cooldown()
-		#EnemyState.HIT:
-			#_init_hit()
-		#EnemyState.DEATH:
-			#_death()
-		#EnemyState.LAUNCHED:
-			#_in_air()
+	match enemy_state:
+		
+		EnemyState.PATROL:
+			_init_patrol()
+		
+		EnemyState.IDLE:
+			_init_idle()
+		
+		EnemyState.ALERT:
+			_init_alert()
+		
+		EnemyState.CHASE:
+			_init_chase()
+		
+		EnemyState.ATTACK_WINDUP:
+			_init_attack_windup()
+		
+		EnemyState.ATTACK:
+			_init_attack()
+		
+		EnemyState.ATTACK_COOLDOWN:
+			_init_attack_cooldown()
+		
+		EnemyState.GOT_HIT:
+			_init_got_hit()
+		
+		EnemyState.LAUNCHED:
+			_init_launched()
+		
+		EnemyState.STANDING_UP:
+			_init_standing_up()
+		
+		EnemyState.DEATH:
+			_init_death()
 
 
-
-
+# RECHECK THAT LATER IF I DIDNT BAMBOOZLE MYSELF
 # Certain states have to be locked so they wont get interrupted
-func _can_change_state_to(new_state : EnemyState):
+func _can_change_state_to(new_state: EnemyState) -> bool:
+	if enemy_state == new_state:
+		return false
 	
 	if enemy_state == EnemyState.DEATH:
 		return false
 	
-	if enemy_state == EnemyState.ATTACK and new_state in [
-		EnemyState.CHASE,
-		EnemyState.PATROL
-	] :
-		return false
-	
-	if enemy_state == EnemyState.LAUNCHED and new_state in [
-		EnemyState.DEATH,
-		EnemyState.GOT_HIT
-	] :
+	if new_state == EnemyState.DEATH:
 		return true
 	
-	if enemy_state == EnemyState.GOT_HIT and new_state in [
+	if enemy_state in [
+		EnemyState.IDLE,
 		EnemyState.PATROL,
-		EnemyState.ATTACK
-	] :
+		EnemyState.CHASE,
+		EnemyState.SEARCH
+	] and new_state in [
+		EnemyState.ATTACK,
+		EnemyState.ATTACK_COOLDOWN
+	]:
 		return false
 	
+	if enemy_state == EnemyState.ALERT:
+		return new_state in [
+			EnemyState.CHASE,
+			EnemyState.ATTACK_WINDUP,
+			EnemyState.GOT_HIT,
+			EnemyState.LAUNCHED,
+			EnemyState.DEATH
+		]
+	
+	if enemy_state == EnemyState.ATTACK_WINDUP:
+		return new_state in [
+			EnemyState.ATTACK,
+			EnemyState.GOT_HIT,
+			EnemyState.LAUNCHED,
+			EnemyState.DEATH
+		]
+	
+	if enemy_state == EnemyState.ATTACK:
+		return new_state in [
+			EnemyState.ATTACK_COOLDOWN,
+			EnemyState.GOT_HIT,
+			EnemyState.LAUNCHED,
+			EnemyState.DEATH
+		]
+	
+	if enemy_state == EnemyState.ATTACK_COOLDOWN:
+		return new_state in [
+			EnemyState.CHASE,
+			EnemyState.GOT_HIT,
+			EnemyState.LAUNCHED,
+			EnemyState.DEATH
+		]
+	
+	if enemy_state == EnemyState.GOT_HIT:
+		return new_state in [
+			EnemyState.CHASE,
+			EnemyState.ATTACK_WINDUP,
+			EnemyState.LAUNCHED,
+			EnemyState.DEATH
+		]
+	
+	if enemy_state == EnemyState.LAUNCHED:
+		return new_state in [
+			EnemyState.STANDING_UP,
+			EnemyState.DEATH
+		]
+	
+	if enemy_state == EnemyState.STANDING_UP:
+		return new_state in [
+			EnemyState.CHASE,
+			EnemyState.PATROL,
+			EnemyState.GOT_HIT,
+			EnemyState.DEATH
+		]
+	
 	return true
+
 
 
 #
@@ -259,7 +349,7 @@ func _init_idle():
 		enemy_animations.play("idle")
 
 
-func _idle_update(delta):
+func _update_idle(delta):
 	
 	state_time -= delta
 	velocity.x = 0
@@ -284,6 +374,9 @@ func _idle_update(delta):
 
 
 func _init_chase():
+	
+	previous_state = EnemyState.CHASE
+	enemy_memory_timer.start(10.0)
 	
 	if enemy_animations.animation != "run":
 		enemy_animations.play("run")
@@ -324,6 +417,7 @@ func _avoid_obstacles():
 
 
 func _on_enemy_memory_timeout() -> void:
+	previous_state = EnemyState.PATROL
 	_change_state(EnemyState.IDLE)
 
 
@@ -443,7 +537,7 @@ func _init_attack():
 
 
 
-func _update_attack():
+func _update_attack(_delta):
 	
 	velocity.x = 0
 	
@@ -491,7 +585,7 @@ func _update_attack_cooldown(delta):
 	state_time -= delta
 	
 	if state_time <= 0:
-		_change_state(previous_state)
+		_change_state(EnemyState.CHASE)
 
 
 #
@@ -582,25 +676,25 @@ func _update_launched(delta):
 	# remember highest point reached
 	if global_position.y < launch_peak_y:
 		launch_peak_y = global_position.y
-
+	
 	var gravity_mult := normal_gravity_mult
-
+	
 	# going up
 	if velocity.y < 0:
 		gravity_mult = float_gravity_mult
-
+	
 	# falling down
 	else:
 		var halfway_down = (launch_start_y + launch_peak_y) / 2.0
-
+	
 		if global_position.y < halfway_down:
 			gravity_mult = float_gravity_mult
 		else:
 			gravity_mult = smash_gravity_mult
-
+	
 	velocity.y += get_gravity().y * gravity_mult * delta
 	velocity.x = move_toward(velocity.x, 0, 500 * delta)
-
+	
 	if is_on_floor():
 		enemy_animations.rotation_degrees = 0
 		_change_state(EnemyState.STANDING_UP)
@@ -670,7 +764,7 @@ func _init_death():
 	if enemy_animations.animation != "dead":
 		enemy_animations.play("dead")
 
-func _update_death():
+func _update_death(_delta):
 	
 	if death_finished:
 		return
@@ -698,7 +792,7 @@ func _update_death():
 func _on_hit_box_body_entered(body: Node2D) -> void:
 	if body is PlayerController and enemy_state != EnemyState.ATTACK:
 		print("player entered attacking zone")
-		_change_state(EnemyState.ATTACK)
+		_change_state(EnemyState.ATTACK_WINDUP)
 
 
 
