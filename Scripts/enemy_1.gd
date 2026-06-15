@@ -57,7 +57,8 @@ var launch_peak_y := 0.0
 @export var enemy_player_chase : RayCast2D
 @export var enemy_player_back_check : RayCast2D
 @export var enemy_detection_box : CollisionShape2D
-@export var enemy_damage_box : CollisionObject2D
+@export var enemy_detection_area : Area2D
+@export var enemy_damage_box : CollisionShape2D
 @export var enemy_hurt_box : Area2D
 @export var speed := 3.0
 
@@ -85,9 +86,10 @@ var time_to_idle : float
 #For enemy remembering player
 @export var enemy_memory_timer : Timer
 @onready var target : PlayerController = get_tree().get_first_node_in_group("player")
+@export var avoiding_obstacle_timer : Timer
 var target_position : Vector2
 var avoiding_obstacle := false
-var avoiding_obstacle_timer : Timer
+
 
 
 func _ready() -> void:
@@ -97,6 +99,7 @@ func _ready() -> void:
 	patrol_timeout.start(float(time_to_patrol))
 	patrol_timeout.timeout.connect(_on_patrol_rest_timeout)
 	#Change state to patroling
+	enemy_animations.play("run")
 	_change_state(enemy_state)
 
 
@@ -106,47 +109,57 @@ func _physics_process(delta : float):
 	if not is_on_floor() and enemy_state != EnemyState.LAUNCHED:
 		velocity += get_gravity() * delta
 	
+	if enemy_player_chase.get_collider() is PlayerController or enemy_player_back_check.get_collider() is PlayerController:
+		if enemy_state != EnemyState.ALERT and enemy_state != EnemyState.CHASE:
+			patrol_timeout.stop()
+			_change_state(EnemyState.ALERT)
 	
 	#Some of the states dont really need delta but might be useful later on, if not, will be removed.
 	match enemy_state:
 		
 		EnemyState.PATROL:
+			print("updating patrol")
 			_update_patrol(delta)
 		
 		EnemyState.IDLE:
+			print("updating idle")
 			_update_idle(delta)
 		
 		EnemyState.ALERT:
+			print("updating alert")
 			_update_alert(delta)
 		
 		EnemyState.CHASE:
+			print("updating chase")
 			_update_chase(delta)
 		
 		EnemyState.ATTACK_WINDUP:
+			print("updating wind up")
 			_update_attack_windup(delta)
 		
 		EnemyState.ATTACK:
+			print("updating attack")
 			_update_attack(delta)
 		
 		EnemyState.ATTACK_COOLDOWN:
+			print("updating attack cool down")
 			_update_attack_cooldown(delta)
 		
 		EnemyState.GOT_HIT:
+			print("updating got hit")
 			_update_got_hit(delta)
 		
 		EnemyState.LAUNCHED:
+			print("updating launched")
 			_update_launched(delta)
 		
 		EnemyState.STANDING_UP:
+			print("updating standing up")
 			_update_standing_up(delta)
 		
 		EnemyState.DEATH:
+			print("updating death")
 			_update_death(delta)
-	
-	
-	if enemy_player_chase.get_collider() is PlayerController or enemy_player_back_check.get_collider() is PlayerController:
-		patrol_timeout.stop()
-		_change_state(EnemyState.ALERT)
 	
 	
 	move_and_slide()
@@ -170,6 +183,7 @@ func _change_state(new_state : EnemyState):
 	
 	if clean_up_state == EnemyState.CHASE:
 		enemy_memory_timer.stop()
+		avoiding_obstacle_timer.stop()
 	
 	if enemy_state == EnemyState.ATTACK:
 		enemy_damage_box.disabled = true
@@ -213,8 +227,6 @@ func _change_state(new_state : EnemyState):
 # RECHECK THAT LATER IF I DIDNT BAMBOOZLE MYSELF
 # Certain states have to be locked so they wont get interrupted
 func _can_change_state_to(new_state: EnemyState) -> bool:
-	if enemy_state == new_state:
-		return false
 	
 	if enemy_state == EnemyState.DEATH:
 		return false
@@ -226,7 +238,7 @@ func _can_change_state_to(new_state: EnemyState) -> bool:
 		EnemyState.IDLE,
 		EnemyState.PATROL,
 		EnemyState.CHASE,
-		EnemyState.SEARCH
+		#EnemyState.SEARCH
 	] and new_state in [
 		EnemyState.ATTACK,
 		EnemyState.ATTACK_COOLDOWN
@@ -239,7 +251,6 @@ func _can_change_state_to(new_state: EnemyState) -> bool:
 			EnemyState.ATTACK_WINDUP,
 			EnemyState.GOT_HIT,
 			EnemyState.LAUNCHED,
-			EnemyState.DEATH
 		]
 	
 	if enemy_state == EnemyState.ATTACK_WINDUP:
@@ -247,7 +258,6 @@ func _can_change_state_to(new_state: EnemyState) -> bool:
 			EnemyState.ATTACK,
 			EnemyState.GOT_HIT,
 			EnemyState.LAUNCHED,
-			EnemyState.DEATH
 		]
 	
 	if enemy_state == EnemyState.ATTACK:
@@ -255,15 +265,14 @@ func _can_change_state_to(new_state: EnemyState) -> bool:
 			EnemyState.ATTACK_COOLDOWN,
 			EnemyState.GOT_HIT,
 			EnemyState.LAUNCHED,
-			EnemyState.DEATH
 		]
 	
 	if enemy_state == EnemyState.ATTACK_COOLDOWN:
 		return new_state in [
 			EnemyState.CHASE,
+			EnemyState.ATTACK_WINDUP,
 			EnemyState.GOT_HIT,
 			EnemyState.LAUNCHED,
-			EnemyState.DEATH
 		]
 	
 	if enemy_state == EnemyState.GOT_HIT:
@@ -271,13 +280,11 @@ func _can_change_state_to(new_state: EnemyState) -> bool:
 			EnemyState.CHASE,
 			EnemyState.ATTACK_WINDUP,
 			EnemyState.LAUNCHED,
-			EnemyState.DEATH
 		]
 	
 	if enemy_state == EnemyState.LAUNCHED:
 		return new_state in [
 			EnemyState.STANDING_UP,
-			EnemyState.DEATH
 		]
 	
 	if enemy_state == EnemyState.STANDING_UP:
@@ -285,7 +292,6 @@ func _can_change_state_to(new_state: EnemyState) -> bool:
 			EnemyState.CHASE,
 			EnemyState.PATROL,
 			EnemyState.GOT_HIT,
-			EnemyState.DEATH
 		]
 	
 	return true
@@ -395,14 +401,15 @@ func _update_chase(_delta):
 		avoiding_obstacle = true
 		direction *= -1
 		_flip_enemy_sprite_rays()
-		avoiding_obstacle_timer.start(3.0)
+		avoiding_obstacle_timer.start(1.0)
 		_avoid_obstacles()
 		return
 	
 	desired_direction = sign(target.global_position.x - global_position.x)
 	
 	if desired_direction != 0:
-		if (direction < 0 and enemy_animations.flip_h == false) or (direction > 0 and enemy_animations.flip_h == true):
+		if (desired_direction < 0 and enemy_animations.flip_h == false) or (desired_direction > 0 and enemy_animations.flip_h == true):
+			direction = desired_direction
 			_flip_enemy_sprite_rays()
 	velocity.x = direction * speed * speed_multiplier
 
@@ -545,12 +552,15 @@ func _update_attack(_delta):
 	
 	if frame == 6 or frame == 7:
 		enemy_damage_box.disabled = false
+		enemy_detection_box.disabled = true
 	
 	if frame >= 8:
 		enemy_damage_box.disabled = true
+		enemy_detection_box.disabled = false
 	
 	if frame >= enemy_animations.sprite_frames.get_frame_count("attack")-1:
 		enemy_damage_box.disabled = true
+		enemy_detection_box.disabled = false
 		_change_state(EnemyState.ATTACK_COOLDOWN)
 	
 
@@ -585,7 +595,10 @@ func _update_attack_cooldown(delta):
 	state_time -= delta
 	
 	if state_time <= 0:
-		_change_state(EnemyState.CHASE)
+		if enemy_detection_area.has_overlapping_bodies():
+			_change_state(EnemyState.ATTACK_WINDUP)
+		else:
+			_change_state(EnemyState.CHASE)
 
 
 #
@@ -811,7 +824,7 @@ func _checking_walls_and_falls() -> bool :
 # Flip sprite + rays + collisions
 func _flip_enemy_sprite_rays():
 	enemy_animations.flip_h = direction < 0
-	
+	enemy_damage_box.position.x *= -1
 	enemy_ground_check.position.x *= -1
 	_flip_raycast(enemy_player_chase)
 	_flip_raycast(enemy_wall_check)
@@ -830,3 +843,7 @@ func _flip_raycast(ray : RayCast2D):
 #####					HELP FUNCTIONS END
 ###
 #
+
+
+func _on_avoiding_obstacle_timeout() -> void:
+	pass # Replace with function body.

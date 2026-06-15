@@ -422,7 +422,7 @@ size = Vector2(37, 20)
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_arec4"]
 size = Vector2(37, 20)
 
-[node name="Enemy1" type="CharacterBody2D" unique_id=370468974 node_paths=PackedStringArray("enemy_animations", "enemy_ground_check", "enemy_wall_check", "enemy_player_chase", "enemy_player_back_check", "enemy_detection_box", "enemy_damage_box", "enemy_hurt_box", "patrol_timeout", "enemy_memory_timer")]
+[node name="Enemy1" type="CharacterBody2D" unique_id=370468974 node_paths=PackedStringArray("enemy_animations", "enemy_ground_check", "enemy_wall_check", "enemy_player_chase", "enemy_player_back_check", "enemy_detection_box", "enemy_detection_area", "enemy_damage_box", "enemy_hurt_box", "patrol_timeout", "enemy_memory_timer", "avoiding_obstacle_timer")]
 collision_layer = 16
 collision_mask = 7
 script = ExtResource("1_hmo6u")
@@ -432,10 +432,12 @@ enemy_wall_check = NodePath("RayCasts/WallCheck")
 enemy_player_chase = NodePath("RayCasts/PlayerChase")
 enemy_player_back_check = NodePath("RayCasts/PlayerBackCheck")
 enemy_detection_box = NodePath("DetectionBox/CollisionShape2D")
-enemy_damage_box = NodePath("AttackingBox")
+enemy_detection_area = NodePath("DetectionBox")
+enemy_damage_box = NodePath("AttackingBox/CollisionShape2D")
 enemy_hurt_box = NodePath("HurtedBox")
 patrol_timeout = NodePath("PatrolRest")
 enemy_memory_timer = NodePath("EnemyMemory")
+avoiding_obstacle_timer = NodePath("AvoidingObstacle")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1440814162]
 visible = false
@@ -492,7 +494,6 @@ position = Vector2(29, 0)
 shape = SubResource("RectangleShape2D_v73nf")
 
 [node name="DetectionBox" type="Area2D" parent="." unique_id=1478801077]
-visible = false
 collision_layer = 128
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="DetectionBox" unique_id=758051927]
@@ -505,6 +506,10 @@ one_shot = true
 [node name="EnemyMemory" type="Timer" parent="." unique_id=1970577044]
 one_shot = true
 
+[node name="AvoidingObstacle" type="Timer" parent="." unique_id=956408632]
+one_shot = true
+
 [connection signal="body_entered" from="DetectionBox" to="." method="_on_hit_box_body_entered"]
 [connection signal="timeout" from="PatrolRest" to="." method="_on_patrol_timeout_timeout"]
 [connection signal="timeout" from="EnemyMemory" to="." method="_on_enemy_memory_timeout"]
+[connection signal="timeout" from="AvoidingObstacle" to="." method="_on_avoiding_obstacle_timeout"]
