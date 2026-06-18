@@ -424,7 +424,7 @@ size = Vector2(37, 20)
 
 [node name="Enemy1" type="CharacterBody2D" unique_id=370468974 node_paths=PackedStringArray("enemy_animations", "enemy_ground_check", "enemy_wall_check", "enemy_player_chase", "enemy_player_back_check", "enemy_detection_box", "enemy_detection_area", "enemy_damage_box", "enemy_hurt_box", "patrol_timeout", "enemy_memory_timer", "avoiding_obstacle_timer")]
 collision_layer = 16
-collision_mask = 7
+collision_mask = 6
 script = ExtResource("1_hmo6u")
 enemy_animations = NodePath("EnemyAnimation/AnimatedSprite2D")
 enemy_ground_check = NodePath("RayCasts/GroundCheck")
