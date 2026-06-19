@@ -33,7 +33,7 @@ enum ActionState {
 @export var move_speed := 300.0
 @export var ground_acceleration := 2200.0
 @export var ground_deceleration := 3600.0
-@export var air_acceleration := 1200.0
+@export var air_acceleration := 10000.0
 @export var jump_velocity := -600.0
 
 
@@ -45,6 +45,7 @@ enum ActionState {
 @export_category("Combat")
 @export_range(0.0, 1.0) var attack_movement_multiplier := 0.15
 @export var hurt_deceleration := 900.0
+@export var air_attack_limiter := 3
 
 
 @export_category("Drop Through")
@@ -62,6 +63,7 @@ var action_state: ActionState = ActionState.DEFAULT
 
 var movement_state_time := 0.0
 var action_state_time := 0.0
+var airborne_gravity_time := 0.0
 
 # Current horizontal input: -1.0, 0.0 or 1.0.
 var move_input := 0.0
@@ -157,6 +159,8 @@ func _enter_action_state(new_state: ActionState) -> void:
 		
 		ActionState.AIRBORNE_ATTACK:
 			action_state_time = 0.30
+			airborne_gravity_time = 0.5
+			air_attack_limiter -= 1
 		
 		ActionState.AIRBORNE_ATTACK_UP:
 			action_state_time = 0.35
@@ -193,6 +197,9 @@ func _can_change_action_state(new_state: ActionState) -> bool:
 	
 	if new_state == ActionState.DEAD:
 		return true
+	
+	if new_state == ActionState.AIRBORNE_ATTACK and air_attack_limiter < 0:
+		return false
 	
 	if new_state == ActionState.GOT_HIT:
 		return true
@@ -286,7 +293,7 @@ func _enter_movement_state(new_state: MovementState) -> void:
 			pass
 		
 		MovementState.AIRBORNE:
-			pass
+			air_attack_limiter = 3
 		
 		MovementState.DASHING:
 			movement_state_time = dash_duration
@@ -422,11 +429,22 @@ func _update_dash(delta: float) -> void:
 
 
 func _apply_gravity(delta: float) -> void:
+	
 	if movement_state == MovementState.DASHING:
 		return
 	
-	if not is_on_floor():
-		velocity += get_gravity() * delta
+	airborne_gravity_time -= delta
+	
+	if velocity.y < 0 and action_state == ActionState.AIRBORNE_ATTACK:
+		velocity.y = 0
+	
+	if action_state == ActionState.AIRBORNE_ATTACK and airborne_gravity_time > 0:
+		velocity.y += 0 * delta
+		print(velocity.y)
+		return
+	
+	if not is_on_floor() and airborne_gravity_time <= 0:
+		velocity += (get_gravity() - Vector2(0,130)) * delta
 
 
 #
@@ -484,7 +502,8 @@ func _update_horizontal_movement(
 ) -> void:
 	var movement_multiplier := _get_action_movement_multiplier()
 	var target_speed := move_input * move_speed * movement_multiplier
-
+	
+	
 	if move_input != 0:
 		velocity.x = move_toward(
 			velocity.x,

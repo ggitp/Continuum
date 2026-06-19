@@ -37,10 +37,10 @@ func _get_desired_animation() -> StringName:
 			return &"air_attack"
 		
 		PlayerController.ActionState.AIRBORNE_ATTACK_UP:
-			return &"air_attack_up"
+			return &"jump_up_attack"
 		
 		PlayerController.ActionState.AIRBORNE_ATTACK_DOWN:
-			return &"air_attack_down"
+			return &"jump_down_attack"
 		
 		PlayerController.ActionState.DASHING_ATTACK:
 			return &"dash_attack"
@@ -87,6 +87,12 @@ func _get_animation_offset(animation_name: StringName) -> Vector2:
 		
 		&"air_attack_down":
 			return Vector2(0, -4)
+		
+		&"idle":
+			return Vector2(0.185, 2.52)
+		
+		&"run":
+			return Vector2(0.185, 2.52)
 		
 		_:
 			return Vector2.ZERO

@@ -118,47 +118,36 @@ func _physics_process(delta : float):
 	match enemy_state:
 		
 		EnemyState.PATROL:
-			print("updating patrol")
 			_update_patrol(delta)
 		
 		EnemyState.IDLE:
-			print("updating idle")
 			_update_idle(delta)
 		
 		EnemyState.ALERT:
-			print("updating alert")
 			_update_alert(delta)
 		
 		EnemyState.CHASE:
-			print("updating chase")
 			_update_chase(delta)
 		
 		EnemyState.ATTACK_WINDUP:
-			print("updating wind up")
 			_update_attack_windup(delta)
 		
 		EnemyState.ATTACK:
-			print("updating attack")
 			_update_attack(delta)
 		
 		EnemyState.ATTACK_COOLDOWN:
-			print("updating attack cool down")
 			_update_attack_cooldown(delta)
 		
 		EnemyState.GOT_HIT:
-			print("updating got hit")
 			_update_got_hit(delta)
 		
 		EnemyState.LAUNCHED:
-			print("updating launched")
 			_update_launched(delta)
 		
 		EnemyState.STANDING_UP:
-			print("updating standing up")
 			_update_standing_up(delta)
 		
 		EnemyState.DEATH:
-			print("updating death")
 			_update_death(delta)
 	
 	
@@ -169,7 +158,6 @@ func _physics_process(delta : float):
 func _change_state(new_state : EnemyState):
 	
 	if enemy_state == new_state:
-		print("state didnt change, dont do anything")
 		return
 	
 	var clean_up_state = enemy_state
@@ -804,7 +792,6 @@ func _update_death(_delta):
 #Player enters attack zone
 func _on_hit_box_body_entered(body: Node2D) -> void:
 	if body is PlayerController and enemy_state != EnemyState.ATTACK:
-		print("player entered attacking zone")
 		_change_state(EnemyState.ATTACK_WINDUP)
 
 
