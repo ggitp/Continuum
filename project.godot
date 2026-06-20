@@ -94,6 +94,7 @@ up={
 2d_physics/layer_8="EnemyAttackingBox"
 2d_physics/layer_9="PlayerHitBox"
 2d_physics/layer_10="EnemyDetectionArea"
+2d_physics/layer_11="PlayerAttackingBox"
 
 [physics]
 

@@ -82,6 +82,9 @@ func _get_animation_offset(animation_name: StringName) -> Vector2:
 		&"jump":
 			return Vector2(0, -6)
 		
+		&"attack_1":
+			return Vector2(0.185, 2.52)
+		
 		&"air_attack_up":
 			return Vector2(0, -10)
 		

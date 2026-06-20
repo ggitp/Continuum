@@ -330,7 +330,7 @@ animations = [{
 "duration": 0.3,
 "texture": SubResource("AtlasTexture_pg0gw")
 }],
-"loop": true,
+"loop": false,
 "name": &"air_attack",
 "speed": 3.0
 }, {
@@ -344,7 +344,7 @@ animations = [{
 "duration": 0.5,
 "texture": SubResource("AtlasTexture_e6mvm")
 }],
-"loop": true,
+"loop": false,
 "name": &"attack_1",
 "speed": 3.0
 }, {
@@ -364,7 +364,7 @@ animations = [{
 "duration": 0.7,
 "texture": SubResource("AtlasTexture_1htnp")
 }],
-"loop": true,
+"loop": false,
 "name": &"attack_3",
 "speed": 5.0
 }, {
@@ -381,7 +381,7 @@ animations = [{
 "duration": 0.3,
 "texture": SubResource("AtlasTexture_8gxox")
 }],
-"loop": true,
+"loop": false,
 "name": &"dash",
 "speed": 4.0
 }, {
@@ -395,7 +395,7 @@ animations = [{
 "duration": 0.6,
 "texture": SubResource("AtlasTexture_lisdf")
 }],
-"loop": true,
+"loop": false,
 "name": &"dash_attack",
 "speed": 3.0
 }, {
@@ -430,12 +430,12 @@ animations = [{
 "duration": 1.0,
 "texture": SubResource("AtlasTexture_feq18")
 }],
-"loop": true,
+"loop": false,
 "name": &"dead",
 "speed": 10.0
 }, {
 "frames": [],
-"loop": true,
+"loop": false,
 "name": &"default",
 "speed": 5.0
 }, {
@@ -518,7 +518,7 @@ animations = [{
 "duration": 0.57,
 "texture": SubResource("AtlasTexture_8eeqe")
 }],
-"loop": true,
+"loop": false,
 "name": &"idle_up_attack",
 "speed": 4.0
 }, {
@@ -552,7 +552,7 @@ animations = [{
 "duration": 0.55,
 "texture": SubResource("AtlasTexture_r7t2e")
 }],
-"loop": true,
+"loop": false,
 "name": &"jump_down_attack",
 "speed": 4.0
 }, {
@@ -569,7 +569,7 @@ animations = [{
 "duration": 1.0,
 "texture": SubResource("AtlasTexture_xwi16")
 }],
-"loop": true,
+"loop": false,
 "name": &"jump_up_attack",
 "speed": 4.0
 }, {
@@ -626,7 +626,7 @@ animations = [{
 "duration": 0.7,
 "texture": SubResource("AtlasTexture_dtg1u")
 }],
-"loop": true,
+"loop": false,
 "name": &"special_dash_attack",
 "speed": 5.0
 }]
@@ -635,7 +635,11 @@ animations = [{
 radius = 5.0
 height = 31.34
 
-[node name="Player" type="CharacterBody2D" unique_id=375671177 node_paths=PackedStringArray("camera") groups=["player"]]
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_qqcod"]
+radius = 13.0
+height = 82.0
+
+[node name="Player" type="CharacterBody2D" unique_id=375671177 node_paths=PackedStringArray("attacking_box_normal", "camera") groups=["player"]]
 collision_mask = 6
 platform_on_leave = 2
 script = ExtResource("1_6t5aa")
@@ -643,6 +647,7 @@ ground_deceleration = 4600.0
 air_acceleration = 1400.0
 jump_velocity = -330.0
 dash_speed = 550.0
+attacking_box_normal = NodePath("AttackingBox/CollisionShape2D")
 camera = NodePath("Camera2D")
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=1076114640]
@@ -657,12 +662,21 @@ sprite = NodePath("AnimatedSprite2D")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="PlayerAnimator" unique_id=351761233]
 sprite_frames = SubResource("SpriteFrames_cvnsp")
-animation = &"air_attack"
+animation = &"special_dash_attack"
 autoplay = "idle"
-frame = 2
-frame_progress = 0.4902457
 offset = Vector2(0.185, 2.52)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1053104723]
 scale = Vector2(1.125, 1.17)
 shape = SubResource("CapsuleShape2D_aftqw")
+
+[node name="AttackingBox" type="Area2D" parent="." unique_id=231876945]
+collision_layer = 1024
+collision_mask = 16
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="AttackingBox" unique_id=427136443]
+position = Vector2(42, 6)
+rotation = 1.5707964
+shape = SubResource("CapsuleShape2D_qqcod")
+
+[connection signal="body_entered" from="AttackingBox" to="." method="_on_attacking_box_body_entered"]

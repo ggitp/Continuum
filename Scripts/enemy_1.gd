@@ -114,6 +114,9 @@ func _physics_process(delta : float):
 			patrol_timeout.stop()
 			_change_state(EnemyState.ALERT)
 	
+	if _player_in_attack_range():
+		_change_state(EnemyState.ATTACK_WINDUP)
+	
 	#Some of the states dont really need delta but might be useful later on, if not, will be removed.
 	match enemy_state:
 		
@@ -166,6 +169,8 @@ func _change_state(new_state : EnemyState):
 		enemy_state = new_state
 	else : return
 	
+	_exit_state(clean_up_state)
+	
 	if clean_up_state == EnemyState.PATROL:
 		patrol_timeout.stop()
 	
@@ -210,6 +215,20 @@ func _change_state(new_state : EnemyState):
 		
 		EnemyState.DEATH:
 			_init_death()
+
+
+func _exit_state(clean_up_state : EnemyState):
+	match clean_up_state:
+		EnemyState.PATROL:
+			patrol_timeout.stop()
+		
+		EnemyState.CHASE:
+			enemy_memory_timer.stop()
+			avoiding_obstacle_timer.stop()
+		
+		EnemyState.ATTACK:
+			enemy_damage_box.set_deferred("disabled", true)
+			enemy_detection_box.set_deferred("disabled", false)
 
 
 # RECHECK THAT LATER IF I DIDNT BAMBOOZLE MYSELF
@@ -266,7 +285,7 @@ func _can_change_state_to(new_state: EnemyState) -> bool:
 	if enemy_state == EnemyState.GOT_HIT:
 		return new_state in [
 			EnemyState.CHASE,
-			EnemyState.ATTACK_WINDUP,
+			#EnemyState.ATTACK_WINDUP,
 			EnemyState.LAUNCHED,
 		]
 	
@@ -603,16 +622,21 @@ func _update_attack_cooldown(delta):
 #
 
 
+func _take_hit():
+	_change_state(EnemyState.GOT_HIT)
+
+
 func _init_got_hit():
 	
+	print("init got hit")
 	state_time = 0.25
 	if enemy_animations.animation != "hurt":
 		enemy_animations.play("hurt")
-	
-	var knock_dir = target.direction
+	print("playing got hit")
+	var knock_dir = target.facing_direction
 	if knock_dir == 0:
 		knock_dir = direction
-	
+	print(knock_dir)
 	velocity = Vector2(knock_dir * 350, -180)
 
 
@@ -784,15 +808,19 @@ func _update_death(_delta):
 
 
 
+func _player_in_attack_range() -> bool:
+	for body in enemy_detection_area.get_overlapping_bodies():
+		if body is PlayerController:
+			return true
+	return false
 
 
 
 
-
-#Player enters attack zone
-func _on_hit_box_body_entered(body: Node2D) -> void:
-	if body is PlayerController and enemy_state != EnemyState.ATTACK:
-		_change_state(EnemyState.ATTACK_WINDUP)
+##Player enters attack zone
+#func _on_hit_box_body_entered(body: Node2D) -> void:
+	#if body is PlayerController and enemy_state != EnemyState.ATTACK:
+		#_change_state(EnemyState.ATTACK_WINDUP)
 
 
 

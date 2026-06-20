@@ -420,7 +420,7 @@ radius = 11.0
 size = Vector2(37, 20)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_arec4"]
-size = Vector2(37, 20)
+size = Vector2(47.5, 20)
 
 [node name="Enemy1" type="CharacterBody2D" unique_id=370468974 node_paths=PackedStringArray("enemy_animations", "enemy_ground_check", "enemy_wall_check", "enemy_player_chase", "enemy_player_back_check", "enemy_detection_box", "enemy_detection_area", "enemy_damage_box", "enemy_hurt_box", "patrol_timeout", "enemy_memory_timer", "avoiding_obstacle_timer")]
 collision_layer = 16
@@ -488,16 +488,17 @@ shape = SubResource("CapsuleShape2D_hmo6u")
 
 [node name="AttackingBox" type="Area2D" parent="." unique_id=314147041]
 visible = false
+collision_layer = 128
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="AttackingBox" unique_id=133796319]
 position = Vector2(29, 0)
 shape = SubResource("RectangleShape2D_v73nf")
 
 [node name="DetectionBox" type="Area2D" parent="." unique_id=1478801077]
-collision_layer = 128
+collision_layer = 512
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="DetectionBox" unique_id=758051927]
-position = Vector2(29, 0)
+position = Vector2(23.75, 0)
 shape = SubResource("RectangleShape2D_arec4")
 
 [node name="PatrolRest" type="Timer" parent="." unique_id=2037632044]

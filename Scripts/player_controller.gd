@@ -46,6 +46,8 @@ enum ActionState {
 @export_range(0.0, 1.0) var attack_movement_multiplier := 0.15
 @export var hurt_deceleration := 900.0
 @export var air_attack_limiter := 3
+@export var attacking_box_normal : CollisionShape2D
+const ATTACK_BOX_X := 42.0
 
 
 @export_category("Drop Through")
@@ -76,6 +78,7 @@ var drop_through_time := 0.0
 
 
 func _ready() -> void:
+	attacking_box_normal.disabled = true
 	_enter_movement_state(movement_state)
 	_enter_action_state(action_state)
 
@@ -101,8 +104,9 @@ func _physics_process(delta: float) -> void:
 func _read_input() -> void:
 	move_input = Input.get_axis("left", "right")
 	
-	if move_input != 0:
+	if move_input != 0 and not _is_attack_state(action_state):
 		facing_direction = int(sign(move_input))
+		attacking_box_normal.position.x = ATTACK_BOX_X * facing_direction
 	
 	if action_state in [
 		ActionState.GOT_HIT,
@@ -152,7 +156,7 @@ func _enter_action_state(new_state: ActionState) -> void:
 			pass
 		
 		ActionState.ATTACK_1:
-			action_state_time = 0.30
+			action_state_time = 0.4
 		
 		ActionState.ATTACK_3:
 			action_state_time = 0.42
@@ -198,7 +202,7 @@ func _can_change_action_state(new_state: ActionState) -> bool:
 	if new_state == ActionState.DEAD:
 		return true
 	
-	if new_state == ActionState.AIRBORNE_ATTACK and air_attack_limiter < 0:
+	if new_state == ActionState.AIRBORNE_ATTACK and air_attack_limiter <= 0:
 		return false
 	
 	if new_state == ActionState.GOT_HIT:
@@ -290,10 +294,10 @@ func _resolve_movement_state() -> void:
 func _enter_movement_state(new_state: MovementState) -> void:
 	match new_state:
 		MovementState.GROUNDED:
-			pass
+			air_attack_limiter = 3
 		
 		MovementState.AIRBORNE:
-			air_attack_limiter = 3
+			pass
 		
 		MovementState.DASHING:
 			movement_state_time = dash_duration
@@ -438,8 +442,11 @@ func _apply_gravity(delta: float) -> void:
 	if velocity.y < 0 and action_state == ActionState.AIRBORNE_ATTACK:
 		velocity.y = 0
 	
+	if velocity.y > 0 and action_state == ActionState.AIRBORNE_ATTACK:
+		velocity.y -= velocity.y/10
+	
 	if action_state == ActionState.AIRBORNE_ATTACK and airborne_gravity_time > 0:
-		velocity.y += 0 * delta
+		velocity.y += 0
 		print(velocity.y)
 		return
 	
@@ -473,6 +480,7 @@ func _request_attack() -> void:
 		
 		return
 	
+	#attacking_box_normal.disabled = false
 	_change_action_state(ActionState.ATTACK_1)
 
 
@@ -480,7 +488,13 @@ func _request_attack() -> void:
 func _update_attack_action(delta: float) -> void:
 	action_state_time -= delta
 	
+	if action_state_time < 0.4 and action_state_time > 0.25:
+		attacking_box_normal.disabled = false
+	else:
+		attacking_box_normal.disabled = true
+	
 	if action_state_time <= 0:
+		attacking_box_normal.disabled = true
 		_change_action_state(ActionState.DEFAULT)
 
 
@@ -503,6 +517,23 @@ func _update_horizontal_movement(
 	var movement_multiplier := _get_action_movement_multiplier()
 	var target_speed := move_input * move_speed * movement_multiplier
 	
+	if _is_attack_state(action_state) and is_on_floor() and move_input != 0:
+		if facing_direction != move_input:
+			velocity.x = move_toward(
+				velocity.x,
+				30,
+				acceleration * delta
+			)
+	
+	
+	if move_input != 0 and airborne_gravity_time > 0:
+		print("entered")
+		velocity.x = move_toward(
+			velocity.x,
+			target_speed/7,
+			acceleration * delta
+		)
+		return
 	
 	if move_input != 0:
 		velocity.x = move_toward(
@@ -572,7 +603,9 @@ func _teleport_to_location(new_location: Vector2) -> void:
 
 
 
-
+func _on_attacking_box_body_entered(body: Node2D) -> void:
+	if body is EnemyController:
+		body._take_hit()
 
 
 
