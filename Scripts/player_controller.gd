@@ -17,6 +17,7 @@ enum ActionState {
 	
 	ATTACK_1,
 	ATTACK_3,
+	LAUNCH_ATTACK,
 	
 	AIRBORNE_ATTACK,
 	AIRBORNE_ATTACK_UP,
@@ -124,7 +125,10 @@ func _read_input() -> void:
 		_request_dash()
 	
 	if Input.is_action_just_pressed("attack"):
-		_request_attack()
+		_request_attack(ActionState.ATTACK_1)
+	
+	if Input.is_action_just_pressed("launch"):
+		_request_attack(ActionState.LAUNCH_ATTACK)
 
 
 #
@@ -161,6 +165,9 @@ func _enter_action_state(new_state: ActionState) -> void:
 		ActionState.ATTACK_3:
 			action_state_time = 0.42
 		
+		ActionState.LAUNCH_ATTACK:
+			action_state_time = 0.65
+		
 		ActionState.AIRBORNE_ATTACK:
 			action_state_time = 0.30
 			airborne_gravity_time = 0.5
@@ -190,7 +197,8 @@ func _exit_action_state(old_state: ActionState) -> void:
 		ActionState.AIRBORNE_ATTACK, \
 		ActionState.AIRBORNE_ATTACK_UP, \
 		ActionState.AIRBORNE_ATTACK_DOWN, \
-		ActionState.DASHING_ATTACK:
+		ActionState.DASHING_ATTACK, \
+		ActionState.LAUNCH_ATTACK:
 			# Disable attack hitboxes here later.
 			pass
 
@@ -232,7 +240,8 @@ func _is_attack_state(state: ActionState) -> bool:
 		ActionState.AIRBORNE_ATTACK,
 		ActionState.AIRBORNE_ATTACK_UP,
 		ActionState.AIRBORNE_ATTACK_DOWN,
-		ActionState.DASHING_ATTACK
+		ActionState.DASHING_ATTACK,
+		ActionState.LAUNCH_ATTACK
 	]
 
 
@@ -246,7 +255,8 @@ func _update_action_state(delta: float) -> void:
 		ActionState.AIRBORNE_ATTACK, \
 		ActionState.AIRBORNE_ATTACK_UP, \
 		ActionState.AIRBORNE_ATTACK_DOWN, \
-		ActionState.DASHING_ATTACK:
+		ActionState.DASHING_ATTACK, \
+		ActionState.LAUNCH_ATTACK:
 			_update_attack_action(delta)
 		
 		ActionState.GOT_HIT:
@@ -447,7 +457,6 @@ func _apply_gravity(delta: float) -> void:
 	
 	if action_state == ActionState.AIRBORNE_ATTACK and airborne_gravity_time > 0:
 		velocity.y += 0
-		print(velocity.y)
 		return
 	
 	if not is_on_floor() and airborne_gravity_time <= 0:
@@ -462,7 +471,7 @@ func _apply_gravity(delta: float) -> void:
 ##				ATTACK
 #
 
-func _request_attack() -> void:
+func _request_attack(requested_state : ActionState) -> void:
 	if action_state != ActionState.DEFAULT:
 		return
 	
@@ -471,18 +480,24 @@ func _request_attack() -> void:
 		return
 	
 	if movement_state == MovementState.AIRBORNE:
-		if Input.is_action_pressed("up"):
-			_change_action_state(ActionState.AIRBORNE_ATTACK_UP)
-		elif Input.is_action_pressed("down"):
-			_change_action_state(ActionState.AIRBORNE_ATTACK_DOWN)
-		else:
-			_change_action_state(ActionState.AIRBORNE_ATTACK)
-		
+		_change_action_state(_get_air_attack_state(requested_state))
 		return
 	
 	#attacking_box_normal.disabled = false
-	_change_action_state(ActionState.ATTACK_1)
+	_change_action_state(requested_state)
 
+
+func _get_air_attack_state(requested_state : ActionState):
+	
+	if requested_state == ActionState.LAUNCH_ATTACK:
+		return ActionState.DEFAULT #ActionState.AIRBORNE_LAUNCH_ATTACK
+	
+	if Input.is_action_pressed("up"):
+		return ActionState.AIRBORNE_ATTACK_UP
+	if Input.is_action_pressed("down"):
+		return ActionState.AIRBORNE_ATTACK_DOWN
+	
+	return ActionState.AIRBORNE_ATTACK
 
 
 func _update_attack_action(delta: float) -> void:
@@ -514,8 +529,8 @@ func _update_horizontal_movement(
 	acceleration: float,
 	deceleration: float
 ) -> void:
-	var movement_multiplier := _get_action_movement_multiplier()
-	var target_speed := move_input * move_speed * movement_multiplier
+	#var movement_multiplier := _get_action_movement_multiplier()
+	var target_speed := move_input * move_speed# * movement_multiplier
 	
 	if _is_attack_state(action_state) and is_on_floor() and move_input != 0:
 		if facing_direction != move_input:
@@ -524,10 +539,23 @@ func _update_horizontal_movement(
 				30,
 				acceleration * delta
 			)
+		elif move_input == 1:
+			velocity.x = move_toward(
+				velocity.x,
+				80,
+				acceleration/2.5 * delta
+			)
+			return
+		else:
+			velocity.x = move_toward(
+				velocity.x,
+				-80,
+				acceleration/2.5 * delta
+			)
+			return
 	
 	
 	if move_input != 0 and airborne_gravity_time > 0:
-		print("entered")
 		velocity.x = move_toward(
 			velocity.x,
 			target_speed/7,
@@ -604,8 +632,10 @@ func _teleport_to_location(new_location: Vector2) -> void:
 
 
 func _on_attacking_box_body_entered(body: Node2D) -> void:
-	if body is EnemyController:
+	if body is EnemyController and action_state != ActionState.LAUNCH_ATTACK:
 		body._take_hit()
+	else:
+		body._get_launched()
 
 
 

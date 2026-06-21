@@ -27,6 +27,10 @@ func _update_facing() -> void:
 func _get_desired_animation() -> StringName:
 	# Action animations have priority over movement animations.
 	match player.action_state:
+		
+		PlayerController.ActionState.LAUNCH_ATTACK:
+			return &"launch"
+		
 		PlayerController.ActionState.ATTACK_1:
 			return &"attack_1"
 		
@@ -83,6 +87,9 @@ func _get_animation_offset(animation_name: StringName) -> Vector2:
 			return Vector2(0, -6)
 		
 		&"attack_1":
+			return Vector2(0.185, 2.52)
+		
+		&"launch":
 			return Vector2(0.185, 2.52)
 		
 		&"air_attack_up":

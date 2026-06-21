@@ -39,11 +39,11 @@ signal enemy_dead
 var death_finished := false
 
 #Variables for LAUNCHED state
-@export var launch_x := 250.0
-@export var launch_y := -450.0
+@export var launch_x := 80.0
+@export var launch_y := -260.0
 
-@export var normal_gravity_mult := 1.0
-@export var float_gravity_mult := 0.45
+@export var normal_gravity_mult := 0.8
+@export var float_gravity_mult := 0.35
 @export var smash_gravity_mult := 2.2
 
 var launch_start_y := 0.0
@@ -108,6 +108,8 @@ func _physics_process(delta : float):
 	# Add the gravity.
 	if not is_on_floor() and enemy_state != EnemyState.LAUNCHED:
 		velocity += get_gravity() * delta
+	
+	#print(EnemyState.keys()[enemy_state])
 	
 	if enemy_player_chase.get_collider() is PlayerController or enemy_player_back_check.get_collider() is PlayerController:
 		if enemy_state != EnemyState.ALERT and enemy_state != EnemyState.CHASE:
@@ -681,9 +683,15 @@ func _update_got_hit(delta):
 ###
 #
 
-
+func _get_launched():
+	_change_state(EnemyState.LAUNCHED)
 
 func _init_launched():
+	
+	print("init launched")
+	print(position.y)
+	
+	state_time = 0.2
 	
 	if enemy_animations.animation != "launched":
 		enemy_animations.play("launched")
@@ -698,6 +706,11 @@ func _init_launched():
 
 
 func _update_launched(delta):
+	
+	print("update launched")
+	
+	state_time -= delta
+	
 	# remember highest point reached
 	if global_position.y < launch_peak_y:
 		launch_peak_y = global_position.y
@@ -720,7 +733,9 @@ func _update_launched(delta):
 	velocity.y += get_gravity().y * gravity_mult * delta
 	velocity.x = move_toward(velocity.x, 0, 500 * delta)
 	
-	if is_on_floor():
+	if is_on_floor() and state_time <= 0:
+		print(position.y)
+		print(is_on_floor())
 		enemy_animations.rotation_degrees = 0
 		_change_state(EnemyState.STANDING_UP)
 
