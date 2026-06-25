@@ -19,6 +19,7 @@ enum EnemyState {
 	
 	
 	GOT_HIT,
+	GOT_HIT_IN_AIR,
 	KNOCK_BACK,
 	
 	
@@ -38,6 +39,7 @@ var standing_tween : Tween
 signal enemy_dead
 var death_finished := false
 
+
 #Variables for LAUNCHED state
 @export var launch_x := 80.0
 @export var launch_y := -260.0
@@ -49,6 +51,12 @@ var death_finished := false
 var launch_start_y := 0.0
 var launch_peak_y := 0.0
 
+
+#Variables for GOT_HIT_IN_AIR state
+@export var got_hit_in_air_x := 1.0
+@export var got_hit_in_air_y := -120
+
+@export var bump_gravity_mult := 0.6
 
 
 @export var enemy_animations : AnimatedSprite2D
@@ -63,7 +71,7 @@ var launch_peak_y := 0.0
 @export var speed := 3.0
 
 
-
+#Enemy status
 var previous_state : EnemyState
 var enemy_state : EnemyState = EnemyState.PATROL
 var direction := 1
@@ -106,7 +114,7 @@ func _ready() -> void:
 
 func _physics_process(delta : float):
 	# Add the gravity.
-	if not is_on_floor() and enemy_state != EnemyState.LAUNCHED:
+	if not is_on_floor() and enemy_state != EnemyState.LAUNCHED and enemy_state != EnemyState.GOT_HIT_IN_AIR:
 		velocity += get_gravity() * delta
 	
 	#print(EnemyState.keys()[enemy_state])
@@ -146,6 +154,9 @@ func _physics_process(delta : float):
 		EnemyState.GOT_HIT:
 			_update_got_hit(delta)
 		
+		EnemyState.GOT_HIT_IN_AIR:
+			_update_got_hit_in_air(delta)
+		
 		EnemyState.LAUNCHED:
 			_update_launched(delta)
 		
@@ -162,8 +173,9 @@ func _physics_process(delta : float):
 #Changing state of the enemy
 func _change_state(new_state : EnemyState):
 	
-	if enemy_state == new_state:
-		return
+	if new_state != EnemyState.GOT_HIT_IN_AIR:
+		if enemy_state == new_state:
+			return
 	
 	var clean_up_state = enemy_state
 	
@@ -208,6 +220,9 @@ func _change_state(new_state : EnemyState):
 		
 		EnemyState.GOT_HIT:
 			_init_got_hit()
+		
+		EnemyState.GOT_HIT_IN_AIR:
+			_init_got_hit_in_air()
 		
 		EnemyState.LAUNCHED:
 			_init_launched()
@@ -293,7 +308,14 @@ func _can_change_state_to(new_state: EnemyState) -> bool:
 	
 	if enemy_state == EnemyState.LAUNCHED:
 		return new_state in [
+			EnemyState.GOT_HIT_IN_AIR,
 			EnemyState.STANDING_UP,
+		]
+	
+	if enemy_state == EnemyState.GOT_HIT_IN_AIR:
+		return new_state in [
+			EnemyState.STANDING_UP,
+			EnemyState.GOT_HIT_IN_AIR,
 		]
 	
 	if enemy_state == EnemyState.STANDING_UP:
@@ -625,7 +647,10 @@ func _update_attack_cooldown(delta):
 
 
 func _take_hit():
-	_change_state(EnemyState.GOT_HIT)
+	if not is_on_floor() and (EnemyState.LAUNCHED or EnemyState.GOT_HIT_IN_AIR):
+		_change_state(EnemyState.GOT_HIT_IN_AIR)
+	else:
+		_change_state(EnemyState.GOT_HIT)
 
 
 func _init_got_hit():
@@ -662,6 +687,46 @@ func _update_got_hit(delta):
 
 #
 ###
+#####					GOT_HIT END
+###
+#
+
+
+func _init_got_hit_in_air():
+	
+	#state_time = 0.15
+	
+	if enemy_animations.animation != "launched":
+		enemy_animations.play("launched")
+	
+	if enemy_animations.rotation_degrees == 0:
+		enemy_animations.rotation_degrees = -90 * direction
+	
+	var knock_dir := -direction # or based on player side
+	velocity = Vector2(knock_dir * got_hit_in_air_x, got_hit_in_air_y)
+
+
+func _update_got_hit_in_air(delta):
+	
+	#state_time -= delta
+	
+	velocity.y += get_gravity().y * bump_gravity_mult * delta
+	velocity.x = move_toward(velocity.x, 0, 500 * delta)
+	
+	if is_on_floor():
+		enemy_animations.rotation_degrees = 0
+		_change_state(EnemyState.STANDING_UP)
+	
+
+#
+###
+#####					GOT_HIT END
+###
+#
+
+
+#
+###
 #####					KNOCKBACK
 ###
 #
@@ -688,10 +753,10 @@ func _get_launched():
 
 func _init_launched():
 	
-	print("init launched")
-	print(position.y)
+	#print("init launched")
+	#print(position.y)
 	
-	state_time = 0.2
+	state_time = 0.1
 	
 	if enemy_animations.animation != "launched":
 		enemy_animations.play("launched")
@@ -707,7 +772,7 @@ func _init_launched():
 
 func _update_launched(delta):
 	
-	print("update launched")
+	#print("update launched")
 	
 	state_time -= delta
 	
@@ -734,8 +799,8 @@ func _update_launched(delta):
 	velocity.x = move_toward(velocity.x, 0, 500 * delta)
 	
 	if is_on_floor() and state_time <= 0:
-		print(position.y)
-		print(is_on_floor())
+		#print(position.y)
+		#print(is_on_floor())
 		enemy_animations.rotation_degrees = 0
 		_change_state(EnemyState.STANDING_UP)
 
