@@ -672,7 +672,10 @@ height = 31.34
 radius = 16.0
 height = 82.0
 
-[node name="Player" type="CharacterBody2D" unique_id=375671177 node_paths=PackedStringArray("attacking_box_normal", "camera") groups=["player"]]
+[sub_resource type="ConvexPolygonShape2D" id="ConvexPolygonShape2D_qqcod"]
+points = PackedVector2Array(4, 14, -6, -27, 38, -19, 51, -1, 45, 17, 29, 24)
+
+[node name="Player" type="CharacterBody2D" unique_id=375671177 node_paths=PackedStringArray("attacking_box_normal", "attacking_box_3", "camera") groups=["player"]]
 collision_mask = 6
 platform_on_leave = 2
 script = ExtResource("1_6t5aa")
@@ -680,7 +683,8 @@ ground_deceleration = 4600.0
 air_acceleration = 1400.0
 jump_velocity = -330.0
 dash_speed = 550.0
-attacking_box_normal = NodePath("AttackingBox/CollisionShape2D")
+attacking_box_normal = NodePath("AttackingBox/Attack1")
+attacking_box_3 = NodePath("AttackingBox/Attack3")
 camera = NodePath("Camera2D")
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=1076114640]
@@ -695,13 +699,14 @@ sprite = NodePath("AnimatedSprite2D")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="PlayerAnimator" unique_id=351761233]
 sprite_frames = SubResource("SpriteFrames_cvnsp")
-animation = &"launch"
+animation = &"attack_3"
 autoplay = "idle"
-frame = 3
-frame_progress = 1.0
+frame = 1
+frame_progress = 0.73748946
 offset = Vector2(0.185, 2.52)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1053104723]
+visible = false
 scale = Vector2(1.125, 1.17)
 shape = SubResource("CapsuleShape2D_aftqw")
 
@@ -709,9 +714,13 @@ shape = SubResource("CapsuleShape2D_aftqw")
 collision_layer = 1024
 collision_mask = 16
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="AttackingBox" unique_id=427136443]
+[node name="Attack1" type="CollisionShape2D" parent="AttackingBox" unique_id=427136443]
+visible = false
 position = Vector2(42, 2)
 rotation = 1.5707964
 shape = SubResource("CapsuleShape2D_qqcod")
+
+[node name="Attack3" type="CollisionShape2D" parent="AttackingBox" unique_id=829047941]
+shape = SubResource("ConvexPolygonShape2D_qqcod")
 
 [connection signal="body_entered" from="AttackingBox" to="." method="_on_attacking_box_body_entered"]

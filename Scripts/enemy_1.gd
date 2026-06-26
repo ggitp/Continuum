@@ -53,7 +53,7 @@ var launch_peak_y := 0.0
 
 
 #Variables for GOT_HIT_IN_AIR state
-@export var got_hit_in_air_x := 1.0
+@export var got_hit_in_air_x := 30.0
 @export var got_hit_in_air_y := -120
 
 @export var bump_gravity_mult := 0.6
@@ -77,6 +77,7 @@ var enemy_state : EnemyState = EnemyState.PATROL
 var direction := 1
 var desired_direction
 var speed_multiplier := 30.0
+@onready var enemy_health := 200
 
 var state_time := 0.0
 
@@ -347,9 +348,10 @@ func _init_patrol():
 
 
 #Patroling for process frame
-func _update_patrol(_delta):
+func _update_patrol(delta):
 	#Maintaining speed every process frame
-	velocity.x = direction * speed * speed_multiplier
+	_update_horizontal_movement(delta)
+	
 	
 	#Checking for walls and edges
 	if _checking_walls_and_falls():
@@ -419,13 +421,13 @@ func _init_chase():
 		enemy_animations.play("run")
 
 
-func _update_chase(_delta):
+func _update_chase(delta):
 	
 	if target == null:
 		return
 	
 	if avoiding_obstacle:
-		_avoid_obstacles()
+		_avoid_obstacles(delta)
 		return
 	
 	if _checking_walls_and_falls():
@@ -433,7 +435,7 @@ func _update_chase(_delta):
 		direction *= -1
 		_flip_enemy_sprite_rays()
 		avoiding_obstacle_timer.start(1.0)
-		_avoid_obstacles()
+		_avoid_obstacles(delta)
 		return
 	
 	desired_direction = sign(target.global_position.x - global_position.x)
@@ -442,16 +444,16 @@ func _update_chase(_delta):
 		if (desired_direction < 0 and enemy_animations.flip_h == false) or (desired_direction > 0 and enemy_animations.flip_h == true):
 			direction = desired_direction
 			_flip_enemy_sprite_rays()
-	velocity.x = direction * speed * speed_multiplier
+	_update_horizontal_movement(delta)
 
 
-func _avoid_obstacles():
+func _avoid_obstacles(delta):
 	
 	if avoiding_obstacle_timer.is_stopped():
 		avoiding_obstacle = false
 		return
 	
-	velocity.x = direction * speed * speed_multiplier
+	_update_horizontal_movement(delta)
 
 
 func _on_enemy_memory_timeout() -> void:
@@ -646,8 +648,16 @@ func _update_attack_cooldown(delta):
 #
 
 
-func _take_hit():
-	if not is_on_floor() and (EnemyState.LAUNCHED or EnemyState.GOT_HIT_IN_AIR):
+func _recieve_hit(hit_data: Dictionary):
+	
+	enemy_health -= hit_data.damage
+	
+	if enemy_health <= 0:
+		_change_state(EnemyState.DEATH)
+	
+	if hit_data.launch:
+		_change_state(EnemyState.LAUNCHED)
+	elif not is_on_floor():
 		_change_state(EnemyState.GOT_HIT_IN_AIR)
 	else:
 		_change_state(EnemyState.GOT_HIT)
@@ -655,15 +665,19 @@ func _take_hit():
 
 func _init_got_hit():
 	
-	print("init got hit")
+	#Taking damage:
+	
+	
 	state_time = 0.25
+	
 	if enemy_animations.animation != "hurt":
 		enemy_animations.play("hurt")
-	print("playing got hit")
+	
 	var knock_dir = target.facing_direction
+	
 	if knock_dir == 0:
 		knock_dir = direction
-	print(knock_dir)
+	
 	velocity = Vector2(knock_dir * 350, -180)
 
 
@@ -711,7 +725,7 @@ func _update_got_hit_in_air(delta):
 	#state_time -= delta
 	
 	velocity.y += get_gravity().y * bump_gravity_mult * delta
-	velocity.x = move_toward(velocity.x, 0, 500 * delta)
+	velocity.x = move_toward(velocity.x, 0, 40 * delta)
 	
 	if is_on_floor():
 		enemy_animations.rotation_degrees = 0
@@ -821,7 +835,7 @@ func _update_launched(delta):
 func _init_standing_up():
 	
 	velocity.x = 0
-	state_time = 0.35
+	state_time = 0.55
 	
 	enemy_animations.scale.y = 0.6
 	
@@ -833,7 +847,7 @@ func _init_standing_up():
 		enemy_animations,
 		"scale:y",
 		1.225,
-		0.35)
+		0.55)
 
 
 func _update_standing_up(delta):
@@ -909,6 +923,14 @@ func _player_in_attack_range() -> bool:
 #####					HELP FUNCTIONS
 ###
 #
+
+
+func _update_horizontal_movement(delta):
+	velocity.x = move_toward(
+		velocity.x,
+		direction * speed * speed_multiplier,
+		speed * speed_multiplier * 7 * delta
+	)
 
 
 #Checking walls and falls

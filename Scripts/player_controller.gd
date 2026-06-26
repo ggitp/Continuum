@@ -48,7 +48,9 @@ enum ActionState {
 @export var hurt_deceleration := 900.0
 @export var air_attack_limiter := 3
 @export var attacking_box_normal : CollisionShape2D
+@export var attacking_box_3 : CollisionShape2D
 const ATTACK_BOX_X := 42.0
+var combo_queued: bool = false
 
 
 @export_category("Drop Through")
@@ -59,6 +61,21 @@ const ATTACK_BOX_X := 42.0
 
 @export_category("References")
 @export var camera: Camera2D
+
+
+#Player Stats
+var base_damage := 25
+var damage_bonus_buff := 1.0
+var damage_bonus_stats := 1.0
+var attack_num_bonus := 1.0
+var weapon_damage_bonus := 1.0
+
+
+#Buffer next action
+var buffered_action : StringName = &""
+var buffer_time := 0.0
+const INPUT_JUMP_BUFFER_DURATION := 0.3
+const INPUT_LAUNCH_BUFFER_DURATION := 0.2
 
 
 var movement_state: MovementState = MovementState.GROUNDED
@@ -80,6 +97,7 @@ var drop_through_time := 0.0
 
 func _ready() -> void:
 	attacking_box_normal.disabled = true
+	attacking_box_3.disabled = true
 	_enter_movement_state(movement_state)
 	_enter_action_state(action_state)
 
@@ -87,11 +105,18 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	
 	_update_drop_through(delta)
-	_read_input()
 	
 	_update_action_state(delta)
+	
+	_update_input_buffer(delta)
+	
+	_read_input()
+	
 	_update_movement_state(delta)
+	
+	#print("vel:", velocity.y, " pos:", global_position.y, " floor:", is_on_floor(), " action:", ActionState.keys()[action_state], " movement:", MovementState.keys()[movement_state])
 	
 	_apply_gravity(delta)
 	
@@ -109,10 +134,14 @@ func _read_input() -> void:
 		facing_direction = int(sign(move_input))
 		attacking_box_normal.position.x = ATTACK_BOX_X * facing_direction
 	
+	
 	if action_state in [
 		ActionState.GOT_HIT,
 		ActionState.DEAD
 	]:
+		return
+	
+	if _try_to_consume_action():
 		return
 	
 	if Input.is_action_just_pressed("jump"):
@@ -120,6 +149,8 @@ func _read_input() -> void:
 			_start_drop_through()
 		elif _can_jump():
 			_jump()
+		else:
+			_buffer_action(&"jump")
 	
 	if Input.is_action_just_pressed("dash"):
 		_request_dash()
@@ -129,6 +160,58 @@ func _read_input() -> void:
 	
 	if Input.is_action_just_pressed("launch"):
 		_request_attack(ActionState.LAUNCH_ATTACK)
+
+
+
+
+func _update_input_buffer(delta):
+	
+	if buffer_time <= 0:
+		return
+	
+	buffer_time -= delta
+	
+	if buffer_time <= 0:
+		buffered_action = &""
+
+
+func _try_to_consume_action():
+	
+	match buffered_action:
+		
+		&"jump":
+			if _can_jump():
+				_clear_input_buffer()
+				_jump()
+				return true
+		
+		&"launch":
+			if (
+			_can_change_action_state(ActionState.LAUNCH_ATTACK)
+			and action_state != ActionState.LAUNCH_ATTACK
+			and is_on_floor()):
+				_clear_input_buffer()
+				_change_action_state(ActionState.LAUNCH_ATTACK)
+				return true
+	return false
+
+
+
+func _buffer_action(action: StringName):
+	
+	buffered_action = action
+	
+	match action:
+		&"jump":
+			buffer_time = INPUT_JUMP_BUFFER_DURATION
+		
+		&"launch":
+			buffer_time = INPUT_LAUNCH_BUFFER_DURATION
+
+
+func _clear_input_buffer() -> void:
+	buffered_action = &""
+	buffer_time = 0.0
 
 
 #
@@ -160,10 +243,10 @@ func _enter_action_state(new_state: ActionState) -> void:
 			pass
 		
 		ActionState.ATTACK_1:
-			action_state_time = 0.4
+			action_state_time = 0.42
 		
 		ActionState.ATTACK_3:
-			action_state_time = 0.42
+			action_state_time = 0.7
 		
 		ActionState.LAUNCH_ATTACK:
 			action_state_time = 0.65
@@ -199,8 +282,8 @@ func _exit_action_state(old_state: ActionState) -> void:
 		ActionState.AIRBORNE_ATTACK_DOWN, \
 		ActionState.DASHING_ATTACK, \
 		ActionState.LAUNCH_ATTACK:
-			# Disable attack hitboxes here later.
 			pass
+		
 
 
 func _can_change_action_state(new_state: ActionState) -> bool:
@@ -218,6 +301,9 @@ func _can_change_action_state(new_state: ActionState) -> bool:
 	
 	if action_state == ActionState.GOT_HIT:
 		return false
+	
+	if _get_next_combo_attack(action_state) == new_state:
+		return true
 	
 	if action_state == ActionState.DEFAULT:
 		return true
@@ -392,9 +478,11 @@ func _can_jump() -> bool:
 		is_on_floor()
 		and movement_state != MovementState.DASHING
 		and action_state == ActionState.DEFAULT
-	)
+		)
+
 
 func _jump() -> void:
+	airborne_gravity_time = 0.0
 	velocity.y = jump_velocity
 	_change_movement_state(MovementState.AIRBORNE)
 
@@ -472,7 +560,10 @@ func _apply_gravity(delta: float) -> void:
 #
 
 func _request_attack(requested_state : ActionState) -> void:
+	
 	if action_state != ActionState.DEFAULT:
+		if requested_state == ActionState.ATTACK_1:
+			_try_queue_combo()
 		return
 	
 	if movement_state == MovementState.DASHING:
@@ -480,17 +571,18 @@ func _request_attack(requested_state : ActionState) -> void:
 		return
 	
 	if movement_state == MovementState.AIRBORNE:
-		_change_action_state(_get_air_attack_state(requested_state))
+		if requested_state == ActionState.LAUNCH_ATTACK:
+			_buffer_action(&"launch")
+			return
+		
+		_change_action_state(_get_air_attack_state())
 		return
 	
 	#attacking_box_normal.disabled = false
 	_change_action_state(requested_state)
 
 
-func _get_air_attack_state(requested_state : ActionState):
-	
-	if requested_state == ActionState.LAUNCH_ATTACK:
-		return ActionState.DEFAULT #ActionState.AIRBORNE_LAUNCH_ATTACK
+func _get_air_attack_state():
 	
 	if Input.is_action_pressed("up"):
 		return ActionState.AIRBORNE_ATTACK_UP
@@ -500,17 +592,64 @@ func _get_air_attack_state(requested_state : ActionState):
 	return ActionState.AIRBORNE_ATTACK
 
 
+func _try_queue_combo() -> void:
+	if _get_next_combo_attack(action_state) == ActionState.DEFAULT:
+		return
+	
+	if not _is_combo_input_window_open():
+		return
+	
+	combo_queued = true
+
+
+func _get_next_combo_attack(state: ActionState) -> ActionState:
+	match state:
+		ActionState.ATTACK_1:
+			return ActionState.ATTACK_3
+	
+	return ActionState.DEFAULT
+
+
+func _is_combo_input_window_open() -> bool:
+	match action_state:
+		ActionState.ATTACK_1:
+			return action_state_time <= 0.28 and action_state_time > 0.01
+	
+	return false
+
+
 func _update_attack_action(delta: float) -> void:
 	action_state_time -= delta
 	
-	if action_state_time < 0.4 and action_state_time > 0.25:
-		attacking_box_normal.disabled = false
-	else:
-		attacking_box_normal.disabled = true
+	if action_state == ActionState.ATTACK_1:
+		if action_state_time < 0.4 and action_state_time > 0.25:
+			attacking_box_normal.disabled = false
+		else:
+			attacking_box_normal.disabled = true
 	
-	if action_state_time <= 0:
+	if action_state == ActionState.ATTACK_3:
+		if action_state_time < 0.56 and action_state_time > 0.28:
+			attacking_box_3.disabled = false
+		else:
+			attacking_box_3.disabled = true
+	
+	if action_state_time <= 0.0:
 		attacking_box_normal.disabled = true
+		attacking_box_3.disabled = true
+		
+		var next_attack := _get_next_combo_attack(action_state)
+		
+		if combo_queued and next_attack != ActionState.DEFAULT:
+			combo_queued = false
+			_change_action_state(next_attack)
+			return
+		
+		combo_queued = false
 		_change_action_state(ActionState.DEFAULT)
+	
+	#if action_state_time <= 0: #or (is_on_floor() and action_state == ActionState.AIRBORNE_ATTACK):
+		#attacking_box_normal.disabled = true
+		#_change_action_state(ActionState.DEFAULT)
 
 
 #
@@ -632,13 +771,16 @@ func _teleport_to_location(new_location: Vector2) -> void:
 
 
 func _on_attacking_box_body_entered(body: Node2D) -> void:
-	if body is EnemyController and action_state != ActionState.LAUNCH_ATTACK:
-		body._take_hit()
-	else:
-		body._get_launched()
+	if body is EnemyController:
+		var hit_data := {
+			"damage" : _calculate_damage(),
+			"launch" : action_state == ActionState.LAUNCH_ATTACK,
+		}
+		body._recieve_hit(hit_data)
 
 
-
+func _calculate_damage():
+	return roundi(base_damage * damage_bonus_buff * damage_bonus_stats * attack_num_bonus * weapon_damage_bonus)
 
 
 
