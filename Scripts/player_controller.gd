@@ -30,17 +30,33 @@ enum ActionState {
 }
 
 
+#State durations :
+const ATTACK_1_TIME := 0.35
+const ATTACK_3_TIME := 0.55
+const LAUNCH_ATTACK_TIME := 0.65
+const AIRBORNE_ATTACK_TIME := 0.35
+const AIRBORNE_ATTACK_UP_TIME := 0.35
+const AIRBORNE_ATTACK_DOWN_TIME := 0.40
+const DASHING_ATTACK_TIME := 0.28
+const GOT_HIT_TIME := 0.25
+
+
+
+
+
 @export_category("Movement")
 @export var move_speed := 300.0
 @export var ground_acceleration := 2200.0
-@export var ground_deceleration := 3600.0
-@export var air_acceleration := 10000.0
-@export var jump_velocity := -600.0
+@export var ground_deceleration := 4600.0
+@export var air_acceleration := 1400.0
+@export var air_deceleration := 1000
+@export var jump_velocity := -330.0
+#@export var test := 0.0
 
 
 @export_category("Dash")
-@export var dash_speed := 750.0
-@export var dash_duration := 0.16
+@export var dash_speed := 850.0
+@export var dash_duration := 0.12
 
 
 @export_category("Combat")
@@ -49,9 +65,11 @@ enum ActionState {
 @export var air_attack_limiter := 3
 @export var attacking_box_normal : CollisionShape2D
 @export var attacking_box_3 : CollisionShape2D
-const ATTACK_BOX_X := 42.0
-var combo_queued: bool = false
-
+#const ATTACK_BOX_NORMAL_X := 42.0
+#const ATTACK_BOX_3_X := 
+var combo_queued := false
+var post_airborne_attack_turn_cd := 0.0
+var post_airborne_flag := false
 
 @export_category("Drop Through")
 @export_range(1, 32, 1) var one_way_platform_layer := 3
@@ -74,7 +92,7 @@ var weapon_damage_bonus := 1.0
 #Buffer next action
 var buffered_action : StringName = &""
 var buffer_time := 0.0
-const INPUT_JUMP_BUFFER_DURATION := 0.3
+const INPUT_JUMP_BUFFER_DURATION := 0.17
 const INPUT_LAUNCH_BUFFER_DURATION := 0.2
 
 
@@ -116,7 +134,9 @@ func _physics_process(delta: float) -> void:
 	
 	_update_movement_state(delta)
 	
-	#print("vel:", velocity.y, " pos:", global_position.y, " floor:", is_on_floor(), " action:", ActionState.keys()[action_state], " movement:", MovementState.keys()[movement_state])
+	#print("vel y:", velocity.y, " pos:", global_position.y, " floor:", is_on_floor(), " action:", ActionState.keys()[action_state], " movement:", MovementState.keys()[movement_state])
+	#print(" action:", ActionState.keys()[action_state])
+	print("vel x:", velocity.x)
 	
 	_apply_gravity(delta)
 	
@@ -130,9 +150,9 @@ func _physics_process(delta: float) -> void:
 func _read_input() -> void:
 	move_input = Input.get_axis("left", "right")
 	
-	if move_input != 0 and not _is_attack_state(action_state):
+	if move_input != 0 and not _is_attack_state(action_state) and not post_airborne_flag:
 		facing_direction = int(sign(move_input))
-		attacking_box_normal.position.x = ATTACK_BOX_X * facing_direction
+		$AttackingBox.scale.x = facing_direction
 	
 	
 	if action_state in [
@@ -243,30 +263,30 @@ func _enter_action_state(new_state: ActionState) -> void:
 			pass
 		
 		ActionState.ATTACK_1:
-			action_state_time = 0.42
+			action_state_time = ATTACK_1_TIME
 		
 		ActionState.ATTACK_3:
-			action_state_time = 0.7
+			action_state_time = ATTACK_3_TIME
 		
 		ActionState.LAUNCH_ATTACK:
-			action_state_time = 0.65
+			action_state_time = LAUNCH_ATTACK_TIME
 		
 		ActionState.AIRBORNE_ATTACK:
-			action_state_time = 0.30
+			action_state_time = AIRBORNE_ATTACK_TIME
 			airborne_gravity_time = 0.5
 			air_attack_limiter -= 1
 		
 		ActionState.AIRBORNE_ATTACK_UP:
-			action_state_time = 0.35
+			action_state_time = AIRBORNE_ATTACK_UP_TIME
 		
 		ActionState.AIRBORNE_ATTACK_DOWN:
-			action_state_time = 0.40
+			action_state_time = AIRBORNE_ATTACK_DOWN_TIME
 		
 		ActionState.DASHING_ATTACK:
-			action_state_time = 0.28
+			action_state_time = DASHING_ATTACK_TIME
 		
 		ActionState.GOT_HIT:
-			action_state_time = 0.25
+			action_state_time = GOT_HIT_TIME
 		
 		ActionState.DEAD:
 			velocity = Vector2.ZERO
@@ -277,13 +297,15 @@ func _exit_action_state(old_state: ActionState) -> void:
 	match old_state:
 		ActionState.ATTACK_1, \
 		ActionState.ATTACK_3, \
-		ActionState.AIRBORNE_ATTACK, \
 		ActionState.AIRBORNE_ATTACK_UP, \
 		ActionState.AIRBORNE_ATTACK_DOWN, \
 		ActionState.DASHING_ATTACK, \
 		ActionState.LAUNCH_ATTACK:
 			pass
 		
+		ActionState.AIRBORNE_ATTACK:
+			post_airborne_attack_turn_cd = 0.15
+			post_airborne_flag = true
 
 
 func _can_change_action_state(new_state: ActionState) -> bool:
@@ -334,7 +356,7 @@ func _is_attack_state(state: ActionState) -> bool:
 func _update_action_state(delta: float) -> void:
 	match action_state:
 		ActionState.DEFAULT:
-			pass
+			_update_default(delta)
 		
 		ActionState.ATTACK_1, \
 		ActionState.ATTACK_3, \
@@ -426,7 +448,7 @@ func _update_movement_state(delta: float) -> void:
 			_update_horizontal_movement(
 				delta,
 				air_acceleration,
-				air_acceleration
+				air_deceleration
 			)
 		
 		MovementState.DASHING:
@@ -555,6 +577,27 @@ func _apply_gravity(delta: float) -> void:
 ##				GRAVITY APPLICATION END
 #
 
+
+#
+##				DEFAULT STATE
+#
+
+
+func _update_default(delta):
+	if post_airborne_attack_turn_cd <= 0:
+		return
+	
+	post_airborne_attack_turn_cd -= delta
+	
+	if post_airborne_attack_turn_cd <= 0:
+		post_airborne_flag = false
+
+
+#
+##				DEFAULT STATE END
+#
+
+
 #
 ##				ATTACK
 #
@@ -613,22 +656,35 @@ func _get_next_combo_attack(state: ActionState) -> ActionState:
 func _is_combo_input_window_open() -> bool:
 	match action_state:
 		ActionState.ATTACK_1:
-			return action_state_time <= 0.28 and action_state_time > 0.01
+			return action_state_time <= ATTACK_1_TIME - 0.07 and action_state_time > 0.01
 	
 	return false
 
 
+#const ATTACK_1_TIME := 0.35
+#const ATTACK_3_TIME := 0.55
+#const LAUNCH_ATTACK_TIME := 0.65
+#const AIRBORNE_ATTACK_TIME := 0.35
+#const AIRBORNE_ATTACK_UP_TIME := 0.35
+#const AIRBORNE_ATTACK_DOWN_TIME := 0.40
+#const DASHING_ATTACK_TIME := 0.28
+#const GOT_HIT_TIME := 0.25
+
 func _update_attack_action(delta: float) -> void:
 	action_state_time -= delta
 	
-	if action_state == ActionState.ATTACK_1:
-		if action_state_time < 0.4 and action_state_time > 0.25:
+	if action_state in [
+		ActionState.ATTACK_1,
+		ActionState.LAUNCH_ATTACK,
+		ActionState.AIRBORNE_ATTACK
+	]:
+		if action_state_time < ATTACK_1_TIME and action_state_time > ATTACK_1_TIME/2:
 			attacking_box_normal.disabled = false
 		else:
 			attacking_box_normal.disabled = true
 	
 	if action_state == ActionState.ATTACK_3:
-		if action_state_time < 0.56 and action_state_time > 0.28:
+		if action_state_time < ATTACK_3_TIME - 0.13 and action_state_time > ATTACK_3_TIME/3:
 			attacking_box_3.disabled = false
 		else:
 			attacking_box_3.disabled = true
@@ -671,27 +727,26 @@ func _update_horizontal_movement(
 	#var movement_multiplier := _get_action_movement_multiplier()
 	var target_speed := move_input * move_speed# * movement_multiplier
 	
+	var progress := 1.0 - action_state_time
+	var test := deceleration * pow(1.0 - progress, 1.8)
+	
+	
 	if _is_attack_state(action_state) and is_on_floor() and move_input != 0:
 		if facing_direction != move_input:
 			velocity.x = move_toward(
 				velocity.x,
-				30,
-				acceleration * delta
-			)
-		elif move_input == 1:
-			velocity.x = move_toward(
-				velocity.x,
-				80,
-				acceleration/2.5 * delta
+				1 * move_input,
+				deceleration * delta
 			)
 			return
 		else:
 			velocity.x = move_toward(
 				velocity.x,
-				-80,
-				acceleration/2.5 * delta
+				15 * move_input,
+				test * delta
 			)
 			return
+	
 	
 	
 	if move_input != 0 and airborne_gravity_time > 0:

@@ -84,7 +84,7 @@ func _play_animation(animation_name: StringName) -> void:
 func _get_animation_offset(animation_name: StringName) -> Vector2:
 	match animation_name:
 		&"jump":
-			return Vector2(0, -6)
+			return Vector2(0.185, 2.52)
 		
 		&"attack_1":
 			return Vector2(0.185, 2.52)

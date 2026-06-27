@@ -337,13 +337,13 @@ region = Rect2(960, 0, 240, 128)
 [sub_resource type="SpriteFrames" id="SpriteFrames_cvnsp"]
 animations = [{
 "frames": [{
-"duration": 0.3,
+"duration": 0.4,
 "texture": SubResource("AtlasTexture_wcnj3")
 }, {
-"duration": 0.3,
+"duration": 0.4,
 "texture": SubResource("AtlasTexture_jsob3")
 }, {
-"duration": 0.3,
+"duration": 0.4,
 "texture": SubResource("AtlasTexture_pg0gw")
 }],
 "loop": false,
@@ -679,16 +679,14 @@ points = PackedVector2Array(4, 14, -6, -27, 38, -19, 51, -1, 45, 17, 29, 24)
 collision_mask = 6
 platform_on_leave = 2
 script = ExtResource("1_6t5aa")
-ground_deceleration = 4600.0
-air_acceleration = 1400.0
-jump_velocity = -330.0
 dash_speed = 550.0
+dash_duration = 0.1
 attacking_box_normal = NodePath("AttackingBox/Attack1")
 attacking_box_3 = NodePath("AttackingBox/Attack3")
 camera = NodePath("Camera2D")
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=1076114640]
-zoom = Vector2(0.995, 0.995)
+zoom = Vector2(0.88, 0.88)
 position_smoothing_enabled = true
 position_smoothing_speed = 10.0
 
@@ -699,10 +697,8 @@ sprite = NodePath("AnimatedSprite2D")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="PlayerAnimator" unique_id=351761233]
 sprite_frames = SubResource("SpriteFrames_cvnsp")
-animation = &"attack_3"
+animation = &"jump"
 autoplay = "idle"
-frame = 1
-frame_progress = 0.73748946
 offset = Vector2(0.185, 2.52)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1053104723]
@@ -715,7 +711,6 @@ collision_layer = 1024
 collision_mask = 16
 
 [node name="Attack1" type="CollisionShape2D" parent="AttackingBox" unique_id=427136443]
-visible = false
 position = Vector2(42, 2)
 rotation = 1.5707964
 shape = SubResource("CapsuleShape2D_qqcod")
